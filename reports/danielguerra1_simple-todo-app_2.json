@@ -1,0 +1,454 @@
+{
+  "pullRequest": {
+    "owner": "danielguerra1",
+    "repo": "simple-todo-app",
+    "number": 2
+  },
+  "fileReviews": [
+    {
+      "file": "src/search.js",
+      "codeQuality": {
+        "file": "src/search.js",
+        "issues": [
+          {
+            "line": 79,
+            "severity": "critical",
+            "category": "security",
+            "description": "XSS vulnerability in highlight() function - unsanitized user input directly inserted into HTML with <mark> tags",
+            "suggestion": "Use DOM API methods (createElement, textContent) instead of string concatenation for HTML generation, or use a sanitization library like DOMPurify. Example:\n```javascript\nexport function highlight(title, query) {\n  const div = document.createElement('div');\n  div.textContent = title; // Auto-escapes\n  let html = div.innerHTML;\n  const terms = query.split(' ');\n  terms.forEach(term => {\n    const escapedTerm = term.replace(/[.*+?^${}()|[\\]\\\\]/g, '\\\\$&');\n    const regex = new RegExp(`(${escapedTerm})`, 'gi');\n    html = html.replace(regex, '<mark>$1</mark>');\n  });\n  return html;\n}\n```"
+          },
+          {
+            "line": 79,
+            "severity": "high",
+            "category": "bug-risk",
+            "description": "String replace() only replaces first occurrence - will only highlight the first instance of each search term",
+            "suggestion": "Use replaceAll() or a regex with global flag:\n```javascript\nhtml = html.replace(new RegExp(escapeRegex(terms[i]), 'gi'), '<mark>$&</mark>');\n```"
+          },
+          {
+            "line": 76,
+            "severity": "high",
+            "category": "bug-risk",
+            "description": "Case-sensitive replacement in highlight() but case-insensitive search - will miss highlighting uppercase matches",
+            "suggestion": "Convert to lowercase before replacement or use case-insensitive regex with the 'i' flag"
+          },
+          {
+            "line": 5,
+            "severity": "high",
+            "category": "best-practice",
+            "description": "Using 'var' instead of 'const' for STOP_WORDS constant that never changes",
+            "suggestion": "Replace 'var' with 'const':\n```javascript\nconst STOP_WORDS = ['the', 'a', 'an', 'and', 'or', 'to'];\n```"
+          },
+          {
+            "line": 9,
+            "severity": "medium",
+            "category": "best-practice",
+            "description": "Using 'var' instead of 'const' for variable that doesn't get reassigned",
+            "suggestion": "Use 'const all = listTodos();' - promotes immutability and prevents accidental reassignment"
+          },
+          {
+            "line": 13,
+            "severity": "medium",
+            "category": "best-practice",
+            "description": "Using C-style for loops instead of modern array methods",
+            "suggestion": "Use array methods for better readability:\n```javascript\nconst results = all.filter(todo => {\n  const title = todo.title.toLowerCase();\n  return terms.some(term => \n    !STOP_WORDS.includes(term) && title.includes(term)\n  );\n});\n```"
+          },
+          {
+            "line": 22,
+            "severity": "medium",
+            "category": "best-practice",
+            "description": "Using indexOf() != -1 instead of includes() method",
+            "suggestion": "Replace with modern includes() method:\n```javascript\nif (STOP_WORDS.includes(term)) continue;\n```"
+          },
+          {
+            "line": 30,
+            "severity": "medium",
+            "category": "best-practice",
+            "description": "Unnecessary comparison with boolean literal (matched == true)",
+            "suggestion": "Simplify to 'if (matched)' - comparing booleans to boolean literals is redundant"
+          },
+          {
+            "line": 35,
+            "severity": "medium",
+            "category": "best-practice",
+            "description": "Using undefined comparison instead of hasOwnProperty or optional chaining",
+            "suggestion": "Use optional chaining or hasOwnProperty:\n```javascript\nif (options?.done !== undefined) {\n```"
+          },
+          {
+            "line": 38,
+            "severity": "medium",
+            "category": "best-practice",
+            "description": "Using loose equality (==) instead of strict equality (===)",
+            "suggestion": "Replace with strict equality:\n```javascript\nif (results[k].done === options.done) {\n```"
+          },
+          {
+            "line": 36,
+            "severity": "medium",
+            "category": "performance",
+            "description": "Creating new filtered array instead of using array filter method - less efficient and harder to read",
+            "suggestion": "Use filter method:\n```javascript\nif (options?.done !== undefined) {\n  results = results.filter(r => r.done === options.done);\n}\n```"
+          },
+          {
+            "line": 56,
+            "severity": "medium",
+            "category": "performance",
+            "description": "Repeatedly calling toLowerCase() on same string in nested loop",
+            "suggestion": "Cache the lowercased title outside the inner loop:\n```javascript\nfor (let i = 0; i < results.length; i++) {\n  const titleLower = results[i].title.toLowerCase();\n  let score = 0;\n  for (let j = 0; j < terms.length; j++) {\n    if (titleLower.includes(terms[j])) score++;\n  }\n  scored.push({ todo: results[i], score });\n}\n```"
+          },
+          {
+            "line": 63,
+            "severity": "low",
+            "category": "best-practice",
+            "description": "Using function expression instead of arrow function for simple comparator",
+            "suggestion": "Use arrow function:\n```javascript\nscored.sort((a, b) => b.score - a.score);\n```"
+          },
+          {
+            "line": 67,
+            "severity": "low",
+            "category": "performance",
+            "description": "Unnecessary loop to extract todos from scored array",
+            "suggestion": "Use map method:\n```javascript\nreturn scored.map(item => item.todo);\n```"
+          },
+          {
+            "line": 8,
+            "severity": "low",
+            "category": "maintainability",
+            "description": "Unused 'options' parameter not validated - could cause runtime errors if malformed",
+            "suggestion": "Add parameter validation or document expected structure:\n```javascript\nexport function searchTodos(query, options = {}) {\n  if (typeof query !== 'string') throw new TypeError('query must be a string');\n  // ...\n}\n```"
+          },
+          {
+            "line": 11,
+            "severity": "low",
+            "category": "bug-risk",
+            "description": "No validation that query is a string - will throw if query is null/undefined",
+            "suggestion": "Add input validation:\n```javascript\nif (!query || typeof query !== 'string') return [];\nconst terms = query.toLowerCase().split(' ');\n```"
+          },
+          {
+            "line": 25,
+            "severity": "low",
+            "category": "bug-risk",
+            "description": "No null check on todo.title - will throw if title is undefined",
+            "suggestion": "Add defensive check:\n```javascript\nconst title = (todo.title || '').toLowerCase();\n```"
+          },
+          {
+            "line": 50,
+            "severity": "info",
+            "category": "maintainability",
+            "description": "Missing JSDoc documentation for exported functions",
+            "suggestion": "Add JSDoc comments:\n```javascript\n/**\n * Ranks search results by term frequency\n * @param {string} query - Search query\n * @param {Array} results - Array of todo items\n * @returns {Array} Sorted array by relevance score\n */\nexport function rankResults(query, results) {\n```"
+          },
+          {
+            "line": 50,
+            "severity": "info",
+            "category": "bug-risk",
+            "description": "No validation that results parameter is an array",
+            "suggestion": "Add validation:\n```javascript\nif (!Array.isArray(results)) return [];\n```"
+          }
+        ],
+        "overallScore": 42,
+        "summary": "The file contains 1 CRITICAL XSS vulnerability in the highlight() function that allows arbitrary HTML injection. There are multiple HIGH severity issues including incorrect string replacement logic and outdated JavaScript patterns using 'var' instead of const/let. The code uses legacy ES5 patterns (var, for loops, indexOf) throughout instead of modern ES6+ features (const/let, array methods, includes). Performance issues include redundant toLowerCase() calls in loops and inefficient array operations. The code lacks input validation which creates multiple bug risks. Modernizing to ES6+, fixing the XSS vulnerability, and adding proper input validation are critical improvements needed."
+      },
+      "testCoverage": {
+        "file": "src/search.js",
+        "hasTests": false,
+        "testFiles": [],
+        "untestedPaths": [
+          {
+            "type": "function",
+            "location": "searchTodos(query, options) - Lines 8-45",
+            "priority": "critical",
+            "reasoning": "Core search functionality with XSS vulnerability and multiple edge cases requires comprehensive testing",
+            "suggestedTest": "test('searchTodos(\"\") handles empty query', () => { const result = searchTodos(\"\"); expect(result).toEqual(listTodos()); });"
+          },
+          {
+            "type": "edge-case",
+            "location": "searchTodos - stop words filtering",
+            "priority": "high",
+            "reasoning": "Query with only stop words could return unexpected results or all todos",
+            "suggestedTest": "test('searchTodos(\"the and or\") returns empty array for stop-words-only query', () => { const result = searchTodos(\"the and or\"); expect(result).toEqual([]); });"
+          },
+          {
+            "type": "edge-case",
+            "location": "searchTodos - case-insensitive search",
+            "priority": "high",
+            "reasoning": "Tests case-insensitive search functionality",
+            "suggestedTest": "test('searchTodos(\"URGENT\") finds todos with \"urgent\" (case-insensitive)', () => { const result = searchTodos(\"URGENT\"); expect(result.length).toBeGreaterThan(0); });"
+          },
+          {
+            "type": "branch",
+            "location": "searchTodos - options.done filter",
+            "priority": "high",
+            "reasoning": "Core filtering logic with multiple branches for done/incomplete todos",
+            "suggestedTest": "test('searchTodos(query, {done: true}) returns only completed todos', () => { const result = searchTodos(\"task\", { done: true }); expect(result.every(t => t.done === true)).toBe(true); });"
+          },
+          {
+            "type": "edge-case",
+            "location": "searchTodos - multiple search terms",
+            "priority": "high",
+            "reasoning": "Tests core multi-term search logic",
+            "suggestedTest": "test('searchTodos(\"urgent meeting\") matches todos with either term', () => { const result = searchTodos(\"urgent meeting\"); expect(result.length).toBeGreaterThan(0); });"
+          },
+          {
+            "type": "function",
+            "location": "rankResults(query, results) - Lines 49-72",
+            "priority": "high",
+            "reasoning": "Core ranking logic ensures correct sort order by relevance",
+            "suggestedTest": "test('rankResults sorts by number of matching terms (highest first)', () => { const todos = [{ title: \"buy milk\" }, { title: \"buy milk and eggs\" }, { title: \"buy milk eggs and bread\" }]; const result = rankResults(\"milk eggs bread\", todos); expect(result[0].title).toBe(\"buy milk eggs and bread\"); });"
+          },
+          {
+            "type": "function",
+            "location": "highlight(title, query) - Lines 75-82",
+            "priority": "critical",
+            "reasoning": "Contains XSS vulnerability - malicious input could inject scripts",
+            "suggestedTest": "test('highlight prevents XSS injection in query', () => { const result = highlight(\"Click here\", \"<script>alert('xss')</script>\"); expect(result).not.toContain(\"<script>\"); });"
+          },
+          {
+            "type": "edge-case",
+            "location": "highlight - case sensitivity mismatch",
+            "priority": "high",
+            "reasoning": "Inconsistent with searchTodos (case-insensitive) - may confuse users",
+            "suggestedTest": "test('highlight is case-sensitive (documents current behavior)', () => { const result = highlight(\"Buy MILK\", \"milk\"); expect(result).toBe(\"Buy MILK\"); });"
+          },
+          {
+            "type": "edge-case",
+            "location": "highlight - multiple occurrences",
+            "priority": "high",
+            "reasoning": "Tests replace behavior - currently only replaces first occurrence",
+            "suggestedTest": "test('highlight replaces first occurrence only (documents replace behavior)', () => { const result = highlight(\"milk and milk\", \"milk\"); expect(result).toBe(\"<mark>milk</mark> and milk\"); });"
+          },
+          {
+            "type": "edge-case",
+            "location": "highlight - special regex characters",
+            "priority": "high",
+            "reasoning": "Special characters could cause replace() to break",
+            "suggestedTest": "test('highlight handles special characters in query', () => { const result = highlight(\"Cost $5.00\", \"$5.00\"); expect(result).toBe(\"Cost <mark>$5.00</mark>\"); });"
+          },
+          {
+            "type": "function",
+            "location": "searchAndRank(query, options) - Lines 85-87",
+            "priority": "high",
+            "reasoning": "Integration test for function composition - ensures search and rank work together",
+            "suggestedTest": "test('searchAndRank returns ranked, filtered results', () => { const result = searchAndRank(\"important task\", { done: false }); expect(Array.isArray(result)).toBe(true); });"
+          },
+          {
+            "type": "edge-case",
+            "location": "rankResults - empty results array",
+            "priority": "medium",
+            "reasoning": "Edge case handling for empty input",
+            "suggestedTest": "test('rankResults(query, []) returns empty array', () => { const result = rankResults(\"test\", []); expect(result).toEqual([]); });"
+          },
+          {
+            "type": "edge-case",
+            "location": "searchTodos - no matching todos",
+            "priority": "medium",
+            "reasoning": "Tests empty result handling",
+            "suggestedTest": "test('searchTodos(\"nonexistentxyz123\") returns empty array', () => { const result = searchTodos(\"nonexistentxyz123\"); expect(result).toEqual([]); });"
+          },
+          {
+            "type": "edge-case",
+            "location": "highlight - no matching terms",
+            "priority": "medium",
+            "reasoning": "Tests fallback behavior when no terms match",
+            "suggestedTest": "test('highlight returns original title when no terms match', () => { const result = highlight(\"Buy milk\", \"urgent\"); expect(result).toBe(\"Buy milk\"); });"
+          },
+          {
+            "type": "edge-case",
+            "location": "highlight - empty title or query",
+            "priority": "medium",
+            "reasoning": "Edge case handling for empty strings",
+            "suggestedTest": "test('highlight(\"\", query) returns empty string', () => { expect(highlight(\"\", \"test\")).toBe(\"\"); });"
+          }
+        ],
+        "coverageEstimate": 0,
+        "summary": "Test Completeness: CRITICAL - No tests exist. The src/search.js file is completely untested despite containing 4 exported functions, multiple conditional branches, complex logic, and 1 CRITICAL security vulnerability (XSS in highlight function). Priority breakdown: CRITICAL (2 tests needed for XSS vulnerability and core search), HIGH (8 tests for core logic, filtering, ranking, case handling), MEDIUM (5 tests for edge cases and empty inputs). Immediate action: Create src/search.test.js with tests for the critical security issue, then add comprehensive coverage for all functions and edge cases."
+      },
+      "refactorings": {
+        "file": "src/search.js",
+        "suggestions": [
+          {
+            "type": "modernize",
+            "location": "Lines 5, 11-13, 18-22, 37-38, 53-54, 63-64, 78-79",
+            "impact": "high",
+            "description": "Replace var with const/let throughout the file. Use const for values that don't change and let for reassignable variables.",
+            "before": "var STOP_WORDS = ['the', 'a', 'an', 'and', 'or', 'to'];\n\nexport function searchTodos(query, options) {\n  var all = listTodos();\n  var results = [];\n  var terms = query.toLowerCase().split(' ');\n\n  for (var i = 0; i < all.length; i++) {\n    var todo = all[i];\n    var title = todo.title.toLowerCase();\n    var matched = false;\n\n    for (var j = 0; j < terms.length; j++) {\n      var term = terms[j];\n      // ...\n    }\n  }\n}",
+            "after": "const STOP_WORDS = ['the', 'a', 'an', 'and', 'or', 'to'];\n\nexport function searchTodos(query, options) {\n  const all = listTodos();\n  let results = [];\n  const terms = query.toLowerCase().split(' ');\n\n  for (let i = 0; i < all.length; i++) {\n    const todo = all[i];\n    const title = todo.title.toLowerCase();\n    let matched = false;\n\n    for (let j = 0; j < terms.length; j++) {\n      const term = terms[j];\n      // ...\n    }\n  }\n}",
+            "benefits": "Improves code safety with block scoping, prevents accidental reassignment, makes intent clearer, and follows ES6+ best practices."
+          },
+          {
+            "type": "modernize",
+            "location": "Lines 13-33, 37-43, 53-61, 67-71, 78-80",
+            "impact": "high",
+            "description": "Replace for loops with modern array methods (filter, map, forEach, includes) for cleaner, more functional code.",
+            "before": "for (var i = 0; i < all.length; i++) {\n  var todo = all[i];\n  var title = todo.title.toLowerCase();\n  var matched = false;\n\n  for (var j = 0; j < terms.length; j++) {\n    var term = terms[j];\n\n    if (STOP_WORDS.indexOf(term) != -1) {\n      continue;\n    }\n\n    if (title.indexOf(term) != -1) {\n      matched = true;\n    }\n  }\n\n  if (matched == true) {\n    results.push(todo);\n  }\n}",
+            "after": "const results = all.filter(todo => {\n  const title = todo.title.toLowerCase();\n  \n  return terms.some(term => {\n    if (STOP_WORDS.includes(term)) {\n      return false;\n    }\n    return title.includes(term);\n  });\n});",
+            "benefits": "More concise and readable code, eliminates manual index tracking, reduces bugs, expresses intent clearly with declarative methods."
+          },
+          {
+            "type": "modernize",
+            "location": "Lines 22, 25, 30, 35",
+            "impact": "medium",
+            "description": "Replace loose equality (==, !=) with strict equality (===, !==) to avoid type coercion issues.",
+            "before": "if (STOP_WORDS.indexOf(term) != -1) {\n  continue;\n}\n\nif (title.indexOf(term) != -1) {\n  matched = true;\n}\n\nif (matched == true) {\n  results.push(todo);\n}\n\nif (options && options.done != undefined) {",
+            "after": "if (STOP_WORDS.includes(term)) {\n  continue;\n}\n\nif (title.includes(term)) {\n  matched = true;\n}\n\nif (matched) {\n  results.push(todo);\n}\n\nif (options?.done !== undefined) {",
+            "benefits": "Prevents type coercion bugs, makes comparisons predictable, follows best practices. Using includes() also modernizes the code."
+          },
+          {
+            "type": "extract-function",
+            "location": "Lines 11-33",
+            "impact": "high",
+            "description": "Extract the matching logic into a separate function for better testability and reusability.",
+            "before": "export function searchTodos(query, options) {\n  var all = listTodos();\n  var results = [];\n  var terms = query.toLowerCase().split(' ');\n\n  for (var i = 0; i < all.length; i++) {\n    var todo = all[i];\n    var title = todo.title.toLowerCase();\n    var matched = false;\n\n    for (var j = 0; j < terms.length; j++) {\n      var term = terms[j];\n\n      if (STOP_WORDS.indexOf(term) != -1) {\n        continue;\n      }\n\n      if (title.indexOf(term) != -1) {\n        matched = true;\n      }\n    }\n\n    if (matched == true) {\n      results.push(todo);\n    }\n  }\n  // ... rest of function\n}",
+            "after": "function matchesTodo(todo, terms) {\n  const title = todo.title.toLowerCase();\n  return terms.some(term => \n    !STOP_WORDS.includes(term) && title.includes(term)\n  );\n}\n\nexport function searchTodos(query, options) {\n  const all = listTodos();\n  const terms = query.toLowerCase().split(' ');\n  let results = all.filter(todo => matchesTodo(todo, terms));\n  // ... rest of function\n}",
+            "benefits": "Improves testability, reduces complexity, makes the main function easier to understand, enables reuse of matching logic."
+          },
+          {
+            "type": "extract-function",
+            "location": "Lines 35-43",
+            "impact": "medium",
+            "description": "Extract the filtering logic into a separate function to improve readability and separation of concerns.",
+            "before": "if (options && options.done != undefined) {\n  var filtered = [];\n  for (var k = 0; k < results.length; k++) {\n    if (results[k].done == options.done) {\n      filtered.push(results[k]);\n    }\n  }\n  results = filtered;\n}",
+            "after": "function filterByDoneStatus(results, options) {\n  if (options?.done !== undefined) {\n    return results.filter(todo => todo.done === options.done);\n  }\n  return results;\n}\n\n// In searchTodos:\nresults = filterByDoneStatus(results, options);",
+            "benefits": "Cleaner separation of concerns, easier to test filtering logic independently, more readable with modern array methods."
+          },
+          {
+            "type": "extract-function",
+            "location": "Lines 11, 50",
+            "impact": "low",
+            "description": "Extract query tokenization into a reusable function to eliminate duplication.",
+            "before": "export function searchTodos(query, options) {\n  // ...\n  var terms = query.toLowerCase().split(' ');\n  // ...\n}\n\nexport function rankResults(query, results) {\n  var terms = query.toLowerCase().split(' ');\n  // ...\n}",
+            "after": "function tokenizeQuery(query) {\n  return query.toLowerCase().split(' ').filter(term => term.length > 0);\n}\n\nexport function searchTodos(query, options) {\n  // ...\n  const terms = tokenizeQuery(query);\n  // ...\n}\n\nexport function rankResults(query, results) {\n  const terms = tokenizeQuery(query);\n  // ...\n}",
+            "benefits": "Eliminates code duplication, centralizes tokenization logic, makes it easier to enhance (e.g., filter empty strings, handle special chars)."
+          },
+          {
+            "type": "modernize",
+            "location": "Lines 63-65",
+            "impact": "medium",
+            "description": "Replace traditional function with arrow function for sort comparator.",
+            "before": "scored.sort(function (a, b) {\n  return b.score - a.score;\n});",
+            "after": "scored.sort((a, b) => b.score - a.score);",
+            "benefits": "More concise syntax, modern ES6+ style, maintains consistent code style throughout the file."
+          },
+          {
+            "type": "simplify",
+            "location": "Lines 53-71",
+            "impact": "high",
+            "description": "Simplify rankResults function using map instead of manually building scored array and extracting todos.",
+            "before": "export function rankResults(query, results) {\n  var terms = query.toLowerCase().split(' ');\n  var scored = [];\n\n  for (var i = 0; i < results.length; i++) {\n    var score = 0;\n    for (var j = 0; j < terms.length; j++) {\n      if (results[i].title.toLowerCase().indexOf(terms[j]) != -1) {\n        score = score + 1;\n      }\n    }\n    scored.push({ todo: results[i], score: score });\n  }\n\n  scored.sort(function (a, b) {\n    return b.score - a.score;\n  });\n\n  var out = [];\n  for (var m = 0; m < scored.length; m++) {\n    out.push(scored[m].todo);\n  }\n  return out;\n}",
+            "after": "export function rankResults(query, results) {\n  const terms = tokenizeQuery(query);\n  \n  return results\n    .map(todo => ({\n      todo,\n      score: terms.filter(term => \n        todo.title.toLowerCase().includes(term)\n      ).length\n    }))\n    .sort((a, b) => b.score - a.score)\n    .map(({ todo }) => todo);\n}",
+            "benefits": "More functional and declarative approach, eliminates intermediate variables, cleaner and more readable, uses method chaining effectively."
+          },
+          {
+            "type": "pattern-improvement",
+            "location": "Lines 75-82",
+            "impact": "high",
+            "description": "Fix XSS vulnerability in highlight function - replace simple string replacement with proper HTML escaping and RegExp for case-insensitive global replacement.",
+            "before": "export function highlight(title, query) {\n  var terms = query.split(' ');\n  var html = title;\n  for (var i = 0; i < terms.length; i++) {\n    html = html.replace(terms[i], '<mark>' + terms[i] + '</mark>');\n  }\n  return html;\n}",
+            "after": "function escapeHtml(text) {\n  const div = document.createElement('div');\n  div.textContent = text;\n  return div.innerHTML;\n}\n\nexport function highlight(title, query) {\n  const terms = tokenizeQuery(query);\n  let html = escapeHtml(title);\n  \n  terms.forEach(term => {\n    if (term.length > 0) {\n      const regex = new RegExp(`(${escapeRegex(term)})`, 'gi');\n      html = html.replace(regex, '<mark>$1</mark>');\n    }\n  });\n  \n  return html;\n}\n\nfunction escapeRegex(str) {\n  return str.replace(/[.*+?^${}()|[\\]\\\\]/g, '\\\\$&');\n}",
+            "benefits": "Prevents XSS attacks by escaping HTML, case-insensitive highlighting, replaces all occurrences (not just first), properly escapes special regex characters."
+          },
+          {
+            "type": "modernize",
+            "location": "Lines 78-80",
+            "impact": "low",
+            "description": "Use template literals instead of string concatenation in highlight function.",
+            "before": "for (var i = 0; i < terms.length; i++) {\n  html = html.replace(terms[i], '<mark>' + terms[i] + '</mark>');\n}",
+            "after": "terms.forEach(term => {\n  const regex = new RegExp(`(${escapeRegex(term)})`, 'gi');\n  html = html.replace(regex, `<mark>$1</mark>`);\n});",
+            "benefits": "More readable string formatting, modern ES6+ syntax, easier to maintain."
+          },
+          {
+            "type": "modernize",
+            "location": "Line 35",
+            "impact": "medium",
+            "description": "Use optional chaining and nullish coalescing for safer property access.",
+            "before": "if (options && options.done != undefined) {",
+            "after": "if (options?.done !== undefined) {",
+            "benefits": "Safer property access, more concise, prevents errors if options is null/undefined, modern ES2020+ syntax."
+          },
+          {
+            "type": "simplify",
+            "location": "Line 30",
+            "impact": "low",
+            "description": "Remove redundant boolean comparison.",
+            "before": "if (matched == true) {\n  results.push(todo);\n}",
+            "after": "if (matched) {\n  results.push(todo);\n}",
+            "benefits": "More idiomatic JavaScript, reduces unnecessary comparison, cleaner code."
+          }
+        ],
+        "summary": "The src/search.js file has significant opportunities for modernization and improvement. Key findings: (1) Replace all 'var' declarations with 'const/let' for better scoping and safety; (2) Modernize loops with array methods (filter, map, some, forEach) for cleaner, more functional code; (3) Extract repeated logic into helper functions (matchesTodo, filterByDoneStatus, tokenizeQuery) to reduce duplication and improve testability; (4) Fix critical XSS vulnerability in highlight function by properly escaping HTML; (5) Use strict equality (===) instead of loose equality (==); (6) Apply optional chaining for safer property access. These changes would transform the code from ES5 style to modern ES6+ with functional patterns, significantly improving readability, safety, and maintainability while reducing the codebase size by ~20 lines through more concise expressions."
+      }
+    }
+  ],
+  "summary": {
+    "totalFiles": 1,
+    "overallScore": 42,
+    "criticalIssues": 1,
+    "highPriorityTests": 11,
+    "refactoringOpportunities": 12
+  },
+  "recommendations": [
+    {
+      "priority": "critical",
+      "category": "Security",
+      "description": "Fix XSS vulnerability in highlight() function immediately. User input is directly inserted into HTML without sanitization, allowing script injection attacks. Use DOM API methods or a sanitization library.",
+      "files": [
+        "src/search.js"
+      ]
+    },
+    {
+      "priority": "critical",
+      "category": "Testing",
+      "description": "Add comprehensive test coverage for search.js. The file is completely untested (0% coverage) despite containing critical functionality and a security vulnerability. Create src/search.test.js with tests for all 4 exported functions.",
+      "files": [
+        "src/search.js"
+      ]
+    },
+    {
+      "priority": "high",
+      "category": "Code Quality",
+      "description": "Modernize to ES6+ syntax by replacing all 'var' with 'const/let', using strict equality (===), and replacing for loops with array methods (filter, map, some). This improves safety, readability, and follows modern JavaScript best practices.",
+      "files": [
+        "src/search.js"
+      ]
+    },
+    {
+      "priority": "high",
+      "category": "Bug Fixes",
+      "description": "Fix highlight() function bugs: (1) replace() only highlights first occurrence of each term, (2) case-sensitive replacement doesn't match case-insensitive search behavior. Use regex with global and case-insensitive flags.",
+      "files": [
+        "src/search.js"
+      ]
+    },
+    {
+      "priority": "medium",
+      "category": "Refactoring",
+      "description": "Extract helper functions (matchesTodo, filterByDoneStatus, tokenizeQuery) to reduce code duplication, improve testability, and separate concerns. This will reduce complexity and make the codebase more maintainable.",
+      "files": [
+        "src/search.js"
+      ]
+    },
+    {
+      "priority": "medium",
+      "category": "Input Validation",
+      "description": "Add input validation for function parameters. Check that query is a string, results is an array, and todo.title exists before processing. This prevents runtime errors from malformed inputs.",
+      "files": [
+        "src/search.js"
+      ]
+    },
+    {
+      "priority": "low",
+      "category": "Documentation",
+      "description": "Add JSDoc comments to all exported functions documenting parameters, return types, and behavior. This improves code maintainability and developer experience.",
+      "files": [
+        "src/search.js"
+      ]
+    }
+  ],
+  "metadata": {
+    "analyzedAt": "2026-09-30T06:44:16.301Z",
+    "duration": 313081,
+    "agentVersions": {
+      "code-quality-analyzer": "1.0.0",
+      "test-coverage-analyzer": "1.0.0",
+      "refactoring-suggester": "1.0.0"
+    }
+  }
+}

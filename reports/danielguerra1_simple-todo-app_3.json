@@ -1,0 +1,598 @@
+{
+  "pullRequest": {
+    "owner": "danielguerra1",
+    "repo": "simple-todo-app",
+    "number": 3
+  },
+  "fileReviews": [
+    {
+      "file": "src/db.js",
+      "codeQuality": {
+        "file": "src/db.js",
+        "issues": [
+          {
+            "line": 5,
+            "severity": "critical",
+            "category": "security",
+            "description": "SQL injection vulnerability: The query method accepts raw SQL without any validation, sanitization, or parameterization. Even as a 'shim', this establishes a dangerous pattern that could be copied into production code.",
+            "suggestion": "Implement parameterized queries even in test fixtures to establish secure patterns:\n```javascript\nasync query(sql, params = []) {\n  if (typeof sql !== 'string' || !Array.isArray(params)) {\n    throw new Error('Invalid query parameters');\n  }\n  console.log('[sql]', sql, '[params]', params);\n  return [];\n}\n```"
+          },
+          {
+            "line": 6,
+            "severity": "high",
+            "category": "security",
+            "description": "Potential information disclosure: Logging raw SQL queries to console may expose sensitive data (pa.",
+            "suggestion": "Add a redaction mechanism or use proper logging levels:\n```javascript\nconst sanitizedSql = sql.replace(/password\\s*=\\s*'[^']*'/gi, \"password='***'\");\nconsole.log('[sql]', sanitizedSql);\n```\nOr better: use environment-aware logging that doesn't run in production."
+          },
+          {
+            "line": 5,
+            "severity": "high",
+            "category": "bug-risk",
+            "description": "No error handling: The query method always succeeds and returns an empty array. Real database queries can fail, and code relying on this shim won't handle errors properly.",
+            "suggestion": "Add basic error simulation capability:\n```javascript\nasync query(sql, params = []) {\n  console.log('[sql]', sql);\n  if (sql.includes('INVALID')) {\n    throw new Error('Query failed');\n  }\n  return [];\n}\n```\nThis helps test error paths in consuming code."
+          },
+          {
+            "line": 7,
+            "severity": "medium",
+            "category": "maintainability",
+            "description": "Hard-coded empty array return: The fixture always returns [] regardless of query type (SELECT, INSERT, UPDATE). This limits testing of result-dependent logic.",
+            "suggestion": "Make the fixture configurable:\n```javascript\nexport async function createConnection(mockResults = {}) {\n  return {\n    async query(sql) {\n      console.log('[sql]', sql);\n      return mockResults[sql] || [];\n    }\n  };\n}\n```"
+          },
+          {
+            "line": 3,
+            "severity": "medium",
+            "category": "best-practice",
+            "description": "Missing connection lifecycle methods: Real database connections need close(), transaction support, and error events. Tests won't catch issues with resource cleanup.",
+            "suggestion": "Add minimal lifecycle methods:\n```javascript\nexport async function createConnection() {\n  return {\n    async query(sql) {\n      console.log('[sql]', sql);\n      return [];\n    },\n    async close() {\n      console.log('[db] Connection closed');\n    },\n    async beginTransaction() {},\n    async commit() {},\n    async rollback() {}\n  };\n}\n```"
+          },
+          {
+            "line": 5,
+            "severity": "low",
+            "category": "best-practice",
+            "description": "Missing JSDoc documentation: The public API lacks type information and usage examples, making it unclear what shape queries should take.",
+            "suggestion": "Add JSDoc:\n```javascript\n/**\n * Creates a mock database connection for testing\n * @returns {Promise<{query: function(string): Promise<Array>}>}\n */\nexport async function createConnection() {\n  // ...\n}\n```"
+          },
+          {
+            "line": 6,
+            "severity": "low",
+            "category": "maintainability",
+            "description": "Using console.log for debugging: Production-style logging libraries provide better control over log levels, formatting, and destinations.",
+            "suggestion": "Use a logging abstraction:\n```javascript\nimport { logger } from './logger';\n// ...\nlogger.debug('[sql]', sql);\n```"
+          },
+          {
+            "line": 1,
+            "severity": "info",
+            "category": "maintainability",
+            "description": "Comment indicates 'Not a real driver' but doesn't explain when/why to use this vs a real connection. Could mislead developers.",
+            "suggestion": "Improve documentation:\n```javascript\n/**\n * Minimal database shim for testing purposes only.\n * WARNING: DO NOT use in production. Use a real database driver.\n * This shim logs queries without executing them.\n */\n```"
+          }
+        ],
+        "overallScore": 45,
+        "summary": "This database shim has critical security and reliability issues. While it's labeled as a 'fixture', it establishes dangerous anti-patterns: (1) No SQL parameterization encourages injection vulnerabilities, (2) Raw SQL logging risks exposing sensitive data, (3) No error handling prevents testing failure scenarios, (4) Fixed empty array returns limit test coverage. For a test fixture, it should model secure patterns and realistic behavior. Recommended actions: Add parameterized queries, implement error simulation, provide configurable mock data, and add connection lifecycle methods. The code demonstrates modern ES6+ syntax correctly but fails on security fundamentals."
+      },
+      "testCoverage": {
+        "file": "src/db.js",
+        "hasTests": false,
+        "testFiles": [],
+        "untestedPaths": [
+          {
+            "type": "function",
+            "location": "createConnection() (line 3)",
+            "priority": "medium",
+            "reasoning": "Database connection creation is core infrastructure; fixture code but should verify API contract",
+            "suggestedTest": "Test createConnection() returns a connection object with a query method; assert typeof connection.query === 'function' and query instanceof Function"
+          },
+          {
+            "type": "function",
+            "location": "query(sql) (line 5)",
+            "priority": "high",
+            "reasoning": "Query execution is the primary database operation; even fixtures should validate behavior",
+            "suggestedTest": "Test query('SELECT * FROM users') returns an empty array []; assert Array.isArray(result) and result.length === 0"
+          },
+          {
+            "type": "edge-case",
+            "location": "Invalid SQL input",
+            "priority": "high",
+            "reasoning": "Missing input validation could cause runtime errors in consuming code",
+            "suggestedTest": "Test query(null), query(undefined), query(123), query({}) should either handle gracefully or throw descriptive errors; assert error messages"
+          },
+          {
+            "type": "edge-case",
+            "location": "Empty string SQL",
+            "priority": "medium",
+            "reasoning": "Edge case that could occur in dynamic query building",
+            "suggestedTest": "Test query('') behavior; assert it either returns [] or throws a validation error"
+          },
+          {
+            "type": "edge-case",
+            "location": "SQL parameter injection",
+            "priority": "critical",
+            "reasoning": "Even though this is a fixture, tests should verify API supports parameterized queries to prevent SQL injection in real implementation",
+            "suggestedTest": "Test query('SELECT * FROM users WHERE id = ?', [1]) accepts parameters array; assert parameters are logged or handled correctly"
+          },
+          {
+            "type": "branch",
+            "location": "Console.log execution",
+            "priority": "low",
+            "reasoning": "Verify logging occurs for debugging/monitoring",
+            "suggestedTest": "Test that query('SELECT 1') logs '[sql] SELECT 1' to console; use a console spy/mock and assert console.log.calledWith('[sql]', 'SELECT 1')"
+          },
+          {
+            "type": "edge-case",
+            "location": "Concurrent queries",
+            "priority": "medium",
+            "reasoning": "Async operations can have race conditions",
+            "suggestedTest": "Test calling query() multiple times concurrently with Promise.all(); assert all return correct values and no state corruption"
+          }
+        ],
+        "coverageEstimate": 0,
+        "summary": "The src/db.js file has zero test coverage. This is a minimal database fixture/shim with no dedicated tests. While it's labeled as 'not a real driver,' it still represents a critical integration point. Critical gaps: (1) No validation that the connection object has the expected shape, (2) No verification that query() handles different input types, (3) No tests for parameterized queries (SQL injection prevention API), (4) No error handling tests, (5) No async behavior verification. Recommended: Create src/db.test.js with tests for basic functionality, input validation, parameterized query support, and edge cases."
+      },
+      "refactorings": {
+        "file": "src/db.js",
+        "suggestions": [
+          {
+            "type": "modernize",
+            "location": "createConnection function, lines 3-9",
+            "impact": "medium",
+            "description": "Add proper error handling and connection state management. The current implementation lacks error handling for query failures and doesn't track connection state.",
+            "before": "export async function createConnection() {\n  return {\n    async query(sql) {\n      console.log('[sql]', sql);\n      return [];\n    }\n  };\n}",
+            "after": "export async function createConnection() {\n  let isConnected = true;\n  \n  return {\n    async query(sql) {\n      if (!isConnected) {\n        throw new Error('Connection is closed');\n      }\n      \n      if (!sql || typeof sql !== 'string') {\n        throw new TypeError('Query must be a non-empty string');\n      }\n      \n      console.log('[sql]', sql);\n      return [];\n    },\n    \n    async close() {\n      isConnected = false;\n      console.log('[db] Connection closed');\n    },\n    \n    isConnected() {\n      return isConnected;\n    }\n  };\n}",
+            "benefits": "Adds input validation, connection state tracking, and a proper close method. This makes the shim more realistic and helps catch integration issues during testing."
+          },
+          {
+            "type": "pattern-improvement",
+            "location": "query method, line 5",
+            "impact": "high",
+            "description": "Implement a proper mock/stub pattern with configurable responses. The hardcoded empty array makes testing difficult and unrealistic.",
+            "before": "async query(sql) {\n  console.log('[sql]', sql);\n  return [];\n}",
+            "after": "export async function createConnection(config = {}) {\n  const { mockResponses = {}, logQueries Connected = true;\n  \n  return {\n    async query(sql) {\n      if (!isConnected) {\n        throw new Error('Connection is closed');\n      }\n      \n      if (logQueries) {\n        console.log('[sql]', sql);\n      }\n      \n      // Match mock responses by SQL pattern\n      for (const [pattern, response] of Object.entries(mockResponses)) {\n        if (sql.includes(pattern)) {\n          return typeof response === 'function' ? response(sql) : response;\n        }\n      }\n      \n      return [];\n    },\n    \n    async close() {\n      isConnected = false;\n    }\n  };\n}",
+            "benefits": "Enables configurable mock data for different SQL queries, making the shim useful for actual testing scenarios. The pattern allows injecting test data without modifying the shim code."
+          },
+          {
+            "type": "simplify",
+            "location": "Console logging, line 6",
+            "impact": "low",
+            "description": "Make logging configurable instead of always-on. Hardcoded console.log statements create noise in production and testing environments.",
+            "before": "async query(sql) {\n  console.log('[sql]', sql);\n  return [];\n}",
+            "after": "export async function createConnection(config = {}) {\n  const { enableLogging = false } = config;\n  \n  return {\n    async query(sql) {\n      if (enableLogging) {\n        console.log('[sql]', sql);\n      }\n      return [];\n    }\n  };\n}",
+            "benefits": "Reduces console noise in tests and allows opt-in logging when debugging. Follows the principle of silent by default in test fixtures."
+          }
+        ],
+        "summary": "The src/db.js file is a minimal database shim that would benefit significantly from several refactoring improvements. The highest impact changes are: (1) implementing a proper mock/stub pattern with configurable responses to enable realistic testing scenarios, (2) adding connection state management and proper lifecycle methods (close, isConnected), and (3) adding query history tracking for test assertions. Medium impact improvements include adding input validation, error handling, and comprehensive JSDoc documentation. Lower impact but still valuable changes include making logging configurable and adding helper factory functions. These refactorings transform a basic stub into a production-ready test fixture that accurately simulates database behavior while remaining simple enough for its intended purpose."
+      }
+    },
+    {
+      "file": "src/subscription.js",
+      "codeQuality": {
+        "file": "src/subscription.js",
+        "issues": [
+          {
+            "line": 6,
+            "severity": "critical",
+            "category": "security",
+            "description": "Hardcoded payment API secret key in source code. The key 'FIXTURE-NOT-A-REAL-KEY-prod-billing-9f3a' is stored in plaintext and will be exposed in version control.",
+            "suggestion": "Move secrets to environment variables: `const PAYMENT_API_SECRET = process.env.PAYMENT_API_SECRET;` and store the actual key in a secure vault or .env file (excluded from git)."
+          },
+          {
+            "line": 7,
+            "severity": "critical",
+            "category": "security",
+            "description": "Hardcoded admin override token in source code. This bypass token is exposed to anyone with repository access.",
+            "suggestion": "Remove hardcoded admin token. Use environment variables and implement proper role-based access control (RBAC) through a secure authentication system."
+          },
+          {
+            "line": 19,
+            "severity": "critical",
+            "category": "security",
+            "description": "SQL injection vulnerability. User input 'userId' is concatenated directly into SQL query without parameterization.",
+            "suggestion": "Use parameterized queries: `await db.query('SELECT * FROM subscriptions WHERE user_id = ?', [userId]);`"
+          },
+          {
+            "line": 30,
+            "severity": "critical",
+            "category": "security",
+            "description": "SQL injection vulnerability in plan filter. User-controlled 'filters.plan' is concatenated directly into SQL.",
+            "suggestion": "Use parameterized queries with placeholders for all user inputs."
+          },
+          {
+            "line": 33,
+            "severity": "critical",
+            "category": "security",
+            "description": "SQL injection vulnerability in status filter. User-controlled 'filters.status' is concatenated directly into SQL.",
+            "suggestion": "Use parameterized queries with placeholders for all user inputs."
+          },
+          {
+            "line": 36,
+            "severity": "critical",
+            "category": "security",
+            "description": "SQL injection vulnerability in ORDER BY clause. User-controlled 'filters.orderBy' allows arbitrary SQL injection to manipulate query ordering or inject subqueries.",
+            "suggestion": "Whitelist allowed column names: `const ALLOWED_COLUMNS = ['created_at', 'plan', 'status']; if (!ALLOWED_COLUMNS.includes(filters.orderBy)) throw new Error('Invalid orderBy');`"
+          },
+          {
+            "line": 48,
+            "severity": "critical",
+            "category": "security",
+            "description": "Weak cryptographic hash function. MD5 is cryptographically broken and unsuitable for password hashing. Vulnerable to rainbow table and collision attacks.",
+            "suggestion": "Use bcrypt, argon2, or scrypt with salt: `const passwordHash = await bcrypt.hash(req.body.password, 10);`"
+          },
+          {
+            "line": 49,
+            "severity": "critical",
+            "category": "security",
+            "description": "Sensitive data logging. Plaintext password, credit card number, and CVV are logged to console, exposing them in log files and monitoring systems.",
+            "suggestion": "Never log sensitive data. Remove password, card, and CVV from logs: `console.log('Creating subscription', { email: req.body.email, plan: req.body.plan });`"
+          },
+          {
+            "line": 57,
+            "severity": "critical",
+            "category": "security",
+            "description": "Multiple SQL injection vulnerabilities. All user inputs (userId, plan, role, token) are concatenated directly into INSERT statement.",
+            "suggestion": "Use parameterized query: `await db.query('INSERT INTO subscriptions (user_id, plan, role, token, password_hash) VALUES (?, ?, ?, ?, ?)', [user.userId, user.plan, user.role, token, passwordHash]);`"
+          },
+          {
+            "line": 70,
+            "severity": "critical",
+            "category": "security",
+            "description": "SQL injection vulnerability. 'subscriptionId' is concatenated directly into UPDATE query.",
+            "suggestion": "Use parameterized query: `await db.query('UPDATE subscriptions SET status = ? WHERE id = ?', ['cancelled', subscriptionId]);`"
+          },
+          {
+            "line": 77,
+            "severity": "critical",
+            "category": "security",
+            "description": "Loose equality (==) used for security check. This allows type coercion attacks where attacker could send number 0 or empty string to bypass check.",
+            "suggestion": "Use strict equality: `if (req.headers['x-admin-token'] === ADMIN_OVERRIDE_TOKEN) {`"
+          },
+          {
+            "line": 80,
+            "severity": "critical",
+            "category": "security",
+            "description": "Broken authentication: client-controlled admin privilege escalation. Any user can set 'isAdmin: true' in request body to gain admin access.",
+            "suggestion": "Remove client-side admin check entirely. Admin status must be determined server-side from authenticated session/JWT claims, never from request body."
+          },
+          {
+            "line": 88,
+            "severity": "critical",
+            "category": "security",
+            "description": "Arbitrary code execution via eval(). Attacker can execute any JavaScript code by controlling 'amountStr' parameter (e.g., 'require(\"fs\").readFileSync(\"/etc/passwd\")').",
+            "suggestion": "Use parseFloat() or Number(): `const amount = parseFloat(amountStr); if (isNaN(amount) || amount <= 0) throw new Error('Invalid amount');`"
+          },
+          {
+            "line": 47,
+            "severity": "high",
+            "category": "security",
+            "description": "Cryptographically weak token generation using Math.random(). This is predictable and can be brute-forced to hijack subscriptions.",
+            "suggestion": "Use cryptographically secure random: `const token = 'sub_' + crypto.randomBytes(16).toString('hex');`"
+          },
+          {
+            "line": 89,
+            "severity": "high",
+            "category": "security",
+            "description": "Hardcoded payment API URL without proper validation. No TLS verification or certificate pinning mentioned.",
+            "suggestion": "Use environment variable for API endpoint: `const PAYMENT_API_URL = process.env.PAYMENT_API_URL;` and validate it starts with https://."
+          },
+          {
+            "line": 106,
+            "severity": "critical",
+            "category": "security",
+            "description": "Payment API secret exported and accessible to any importing module, increasing attack surface for credential theft.",
+            "suggestion": "Remove PAYMENT_API_SECRET from exports. Keep secrets private within the module: `export { PLANS };` only."
+          },
+          {
+            "line": 42,
+            "severity": "high",
+            "category": "bug-risk",
+            "description": "No input validation on request body. Missing checks for required fields (userId, plan, password, etc.) will cause crashes or data corruption.",
+            "suggestion": "Add validation: `if (!req.body.userId || !req.body.plan || !req.body.password) throw new Error('Missing required fields');` Consider using a validation library like Joi or Zod."
+          },
+          {
+            "line": 95,
+            "severity": "high",
+            "category": "bug-risk",
+            "description": "Missing error handling for fetch request. Network failures or API errors will cause unhandled promise rejections.",
+            "suggestion": "Wrap in try-catch: `try { const response = await fetch(...); if (!response.ok) throw new Error('Payment failed'); return response.json(); } catch (error) { /* handle error */ }`"
+          },
+          {
+            "line": 100,
+            "severity": "high",
+            "category": "bug-risk",
+            "description": "No null/undefined check for subscription result. If user has no subscription, accessing 'sub.plan' will throw TypeError.",
+            "suggestion": "Add validation: `if (!sub) throw new Error('No subscription found'); const plan = PLANS[sub.plan]; if (!plan) throw new Error('Invalid plan');`"
+          },
+          {
+            "line": 101,
+            "severity": "high",
+            "category": "bug-risk",
+            "description": "No validation that plan exists in PLANS object. Invalid plan name will cause TypeError when accessing undefined.maxTodos.",
+            "suggestion": "Validate plan exists: `const plan = PLANS[sub?.plan]; if (!plan) return false;`"
+          },
+          {
+            "line": 16,
+            "severity": "medium",
+            "category": "bug-risk",
+            "description": "Database connection not closed. Creates connection leak that will exhaust database connection pool.",
+            "suggestion": "Use try-finally to ensure cleanup: `const db = await createConnection(); try { return (await db.query(...))[0]; } finally { await db.close(); }` or use connection pooling."
+          },
+          {
+            "line": 25,
+            "severity": "medium",
+            "category": "bug-risk",
+            "description": "Database connection not closed in searchSubscriptions function.",
+            "suggestion": "Same as above - ensure proper connection cleanup in try-finally block."
+          },
+          {
+            "line": 43,
+            "severity": "medium",
+            "category": "bug-risk",
+            "description": "Database connection not closed in createSubscription function.",
+            "suggestion": "Same as above - ensure proper connection cleanup in try-finally block."
+          },
+          {
+            "line": 67,
+            "severity": "medium",
+            "category": "bug-risk",
+            "description": "Database connection not closed in cancelSubscription function.",
+            "suggestion": "Same as above - ensure proper connection cleanup in try-finally block."
+          },
+          {
+            "line": 45,
+            "severity": "medium",
+            "category": "maintainability",
+            "description": "Unnecessary object spread. 'user' is created but most fields come directly from req.body anyway.",
+            "suggestion": "Access req.body fields directly or destructure only needed fields: `const { userId, plan, role, password } = req.body;`"
+          },
+          {
+            "line": 27,
+            "severity": "low",
+            "category": "maintainability",
+            "description": "String concatenation for SQL building. While the WHERE 1=1 pattern works, it's less maintainable than proper query building.",
+            "suggestion": "Use a query builder library or build conditions array: `const conditions = []; const params = []; if (filters.plan) { conditions.push('plan = ?'); params.push(filters.plan); }`"
+          }
+        ],
+        "overallScore": 8,
+        "summary": "CRITICAL SECURITY ISSUES: This file contains 13 critical and 6 high severity vulnerabilities that make it completely unsuitable for production. Major issues include: (1) Multiple SQL injection vulnerabilities in all database queries - attackers can read/modify/delete any data, (2) eval() allowing arbitrary code execution - complete server compromise, (3) Hardcoded secrets in source code, (4) Client-controlled admin authentication - any user can gain admin privileges, (5) Plaintext logging of passwords and credit card data - PCI-DSS violation, (6) MD5 password hashing - trivially crackable, (7) Weak Math.random() for security tokens - predictable and forgeable. Additional issues: missing input validation, no error handling, resource leaks, type coercion security bugs. This code requires a complete security rewrite before any deployment. Estimated remediation effort: 8-16 hours to fix all critical issues with parameterized queries, proper authentication, secure cryptography, input validation, and error handling."
+      },
+      "testCoverage": {
+        "file": "src/subscription.js",
+        "hasTests": false,
+        "testFiles": [],
+        "untestedPaths": [
+          {
+            "type": "function",
+            "location": "getSubscription(userId) - Line 16-22",
+            "priority": "critical",
+            "reasoning": "SQL injection vulnerability on line 19. User-controlled userId concatenated directly into SQL query without parameterization. Attacker can extract data or modify database.",
+            "suggestedTest": "Test getSubscription with SQL injection payload: getSubscription(\"1' OR '1'='1\"). Assert it throws error or sanitizes input. Test with userId='1; DROP TABLE subscriptions--' and verify database integrity. Test normal case getSubscription('user123') returns subscription object with plan, status fields."
+          },
+          {
+            "type": "function",
+            "location": "searchSubscriptions(filters) - Line 24-39",
+            "priority": "critical",
+            "reasoning": "Multiple SQL injection points on lines 29, 32, 35. All filter parameters (plan, status, orderBy) are concatenated into SQL without sanitization. OrderBy injection especially dangerous for blind SQL injection attacks.",
+            "suggestedTest": "Test searchSubscriptions with malicious filters: { plan: \"' OR 1=1--\", status: \"'; DROP TABLE--\", orderBy: \"id; DELETE FROM users\" }. Assert queries are parameterized or rejected. Test valid filters: { plan: 'premium', status: 'active', orderBy: 'created_at DESC' } returns filtered results. Test empty filters returns all subscriptions."
+          },
+          {
+            "type": "function",
+            "location": "createSubscription(req) - Line 42-63",
+            "priority": "critical",
+            "reasoning": "Multiple critical security issues: (1) SQL injection on line 57-60 concatenating user.userId, user.plan, user.role into INSERT query. (2) Secrets logged to console on lines 50-54 including password, cardNumber, cvv. (3) Weak MD5 password hashing on line 47. (4) Weak token generation using Math.random() on line 46.",
+            "suggestedTest": "Test createSubscription blocks SQL injection: req.body = { userId: \"1' OR '1'='1\", plan: \"'; DROP--\", role: 'admin' }. Assert error or sanitized query. Test sensitive data not logged: spy on console.log, call createSubscription with cardNumber/cvv/password, assert these values never appear in logs. Test returns token object: { token: string, plan: string, role: string }. Test token format matches 'sub_[random]'."
+          },
+          {
+            "type": "function",
+            "location": "cancelSubscription(subscriptionId) - Line 66-72",
+            "priority": "critical",
+            "reasoning": "SQL injection on line 69. subscriptionId concatenated into UPDATE query without parameterization. No authorization check - any user can cancel any subscription.",
+            "suggestedTest": "Test cancelSubscription with SQL injection: cancelSubscription(\"1 OR 1=1\"). Assert only one subscription cancelled or query parameterized. Test authorization: mock user context, call cancelSubscription(otherUserId), assert throws authorization error. Test valid case: cancelSubscription('sub_123') returns { cancelled: true } and database status updated to 'cancelled'."
+          },
+          {
+            "type": "function",
+            "location": "isAdmin(req) - Line 75-83",
+            "priority": "critical",
+            "reasoning": "Broken authentication: (1) Uses == instead of === on line 76 allowing type coercion bypass. (2) Hardcoded admin token 'devflow-admin-2024' exposed in source. (3) Logic bug on line 79 - checks req.body.isAdmin but always returns false, dead code path.",
+            "suggestedTest": "Test isAdmin with type coercion: req = { headers: { 'x-admin-token': ['devflow-admin-2024'] } } (array instead of string). With == this may pass. Assert strict equality prevents bypass. Test with correct token: req = { headers: { 'x-admin-token': 'devflow-admin-2024' } }, assert returns true. Test req.body.isAdmin: req = { body: { isAdmin: true } }, assert returns false. Test without token: assert returns false."
+          },
+          {
+            "type": "function",
+            "location": "chargeCard(cardNumber, amountStr) - Line 86-96",
+            "priority": "critical",
+            "reasoning": "eval() usage on line 87 allows arbitrary code execution. Attacker can pass amountStr like '__import__(\"os\").system(\"rm -rf /\")' or '(function(){/* malicious code */})()'. Also exposes payment API secret in source code.",
+            "suggestedTest": "Test chargeCard blocks code injection: await chargeCard('4111111111111111', 'process.exit(1)'). Assert throws error and process doesn't exit. Test with arithmetic: await chargeCard('4111111111111111', '10+5'), assert sends amount 15. Test normal case: await chargeCard('4111111111111111', '29.99'), assert calls payment API with correct authorization header and returns response.json(). Mock fetch to avoid real API calls."
+          },
+          {
+            "type": "function",
+            "location": "canAddTodo(userId, currentCount) - Line 99-104",
+            "priority": "high",
+            "reasoning": "Depends on getSubscription which has SQL injection vulnerability. No validation that subscription exists or is active. No handling of missing plan in PLANS object.",
+            "suggestedTest": "Test canAddTodo at plan limits: mock getSubscription to return { plan: 'free' }, call canAddTodo('user1', 19) assert true, canAddTodo('user1', 20) assert false. Test premium plan: mock { plan: 'premium' }, canAddTodo('user1', 9999999) assert true (Infinity limit). Test missing subscription: mock getSubscription returns null, assert throws error. Test invalid plan: mock { plan: 'invalid_plan' }, assert handles gracefully or throws error."
+          },
+          {
+            "type": "edge-case",
+            "location": "PAYMENT_API_SECRET exposure - Line 6",
+            "priority": "critical",
+            "reasoning": "Payment API secret hardcoded in source code and exported. Will be visible in version control, bundled client code, and logs. Should be in environment variable.",
+            "suggestedTest": "Test PAYMENT_API_SECRET not exported: attempt to import { PAYMENT_API_SECRET } from './subscription.js', assert fails or returns undefined. Test chargeCard uses env variable: set process.env.PAYMENT_API_SECRET='test-key', call chargeCard, assert Authorization header uses env value not hardcoded string. Add integration test to verify secret not in build artifacts."
+          },
+          {
+            "type": "edge-case",
+            "location": "ADMIN_OVERRIDE_TOKEN exposure - Line 7",
+            "priority": "critical",
+            "reasoning": "Admin bypass token hardcoded and visible in source. Any attacker reading the code gains admin access. Should be rotated frequently and stored securely.",
+            "suggestedTest": "Test admin token from environment: set process.env.ADMIN_TOKEN='secure-token', call isAdmin with matching header, assert true. Test hardcoded token rejected: call isAdmin with 'devflow-admin-2024', assert false. Add test to verify ADMIN_OVERRIDE_TOKEN constant not exported or accessible from module."
+          }
+        ],
+        "coverageEstimate": 0,
+        "summary": "CRITICAL: src/subscription.js has ZERO test coverage and contains multiple critical security vulnerabilities including SQL injection in 5 functions, eval() code execution, hardcoded secrets (payment API key and admin token), plaintext password logging, and broken authentication. Every exported function is untested. This is payment and authentication code that requires 100% test coverage with security-focused test cases. Immediate action required: (1) Add parameterized queries for all SQL, (2) Remove eval(), (3) Move secrets to environment variables, (4) Remove sensitive data logging, (5) Fix authentication logic, (6) Add comprehensive test suite covering all 8 functions, 7 branches, and 16 edge cases identified above. Estimated 40+ test cases needed to reach acceptable coverage for production payment/auth code."
+      },
+      "refactorings": {
+        "file": "src/subscription.js",
+        "suggestions": [
+          {
+            "type": "pattern-improvement",
+            "location": "Lines 16-21, 24-39, 43-62, 66-71 (Database operations)",
+            "impact": "high",
+            "description": "Extract database query logic into a dedicated repository pattern to separate data access from business logic and prevent SQL injection vulnerabilities",
+            "before": "export async function getSubscription(userId) {\n  const db = await createConnection();\n  const rows = await db.query(\n    \"SELECT * FROM subscriptions WHERE user_id = '\" + userId + \"'\"\n  );\n  return rows[0];\n}",
+            "after": "class SubscriptionRepository {\n  async findByUserId(userId) {\n    const db = await createConnection();\n    const rows = await db.query(\n      'SELECT * FROM subscriptions WHERE user_id = ?',\n      [userId]\n    );\n    return rows[0];\n  }\n}\n\nconst repository = new SubscriptionRepository();\n\nexport async function getSubscription(userId) {\n  return repository.findByUserId(userId);\n}",
+            "benefits": "Eliminates SQL injection vulnerabilities, centralizes data access logic, improves testability, makes the codebase more maintainable, and follows the Single Responsibility Principle"
+          },
+          {
+            "type": "modernize",
+            "location": "Lines 18-20, 28-37, 56-60, 69-70 (SQL concatenation)",
+            "impact": "high",
+            "description": "Replace string concatenation with parameterized queries to prevent SQL injection attacks",
+            "before": "const rows = await db.query(\n  \"SELECT * FROM subscriptions WHERE user_id = '\" + userId + \"'\"\n);",
+            "after": "const rows = await db.query(\n  'SELECT * FROM subscriptions WHERE user_id = ?',\n  [userId]\n);",
+            "benefits": "Prevents SQL injection attacks, improves query performance through prepared statements, and makes code more readable"
+          },
+          {
+            "type": "extract-function",
+            "location": "Lines 42-63 (createSubscription function)",
+            "impact": "high",
+            "description": "Extract token generation, password hashing, and validation into separate focused functions",
+            "before": "export async function createSubscription(req) {\n  const db = await createConnection();\n  const user = { ...req.body };\n\n  const token = 'sub_' + Math.random().toString(36).substring(2);\n  const passwordHash = crypto.createHash('md5').update(req.body.password).digest('hex');\n\n  console.log('Creating subscription', {\n    email: req.body.email,\n    card: req.body.cardNumber,\n    cvv: req.body.cvv,\n    password: req.body.password\n  });\n\n  await db.query(\n    \"INSERT INTO subscriptions (user_id, plan, role, token, password_hash) VALUES ('\" +\n      user.userId + \"', '\" + user.plan + \"', '\" + user.role + \"', '\" + token + \"', '\" +\n      passwordHash + \"')\"\n  );\n\n  return { token: token, plan: user.plan, role: user.role };\n}",
+            "after": "function generateSubscriptionToken() {\n  return `sub_${crypto.randomBytes(16).toString('hex')}`;\n}\n\nfunction hashPassword(password) {\n  return crypto.createHash('sha256').update(password).digest('hex');\n}\n\nfunction sanitizeLogData(data) {\n  const { password, cardNumber, cvv, ...safe } = data;\n  return {\n    ...safe,\n    cardNumber: cardNumber ? `****${cardNumber.slice(-4)}` : undefined\n  };\n}\n\nexport async function createSubscription(req) {\n  const token = generateSubscriptionToken();\n  const passwordHash = hashPassword(req.body.password);\n\n  console.log('Creating subscription', sanitizeLogData(req.body));\n\n  const db = await createConnection();\n  await db.query(\n    'INSERT INTO subscriptions (user_id, plan, role, token, password_hash) VALUES (?, ?, ?, ?, ?)',\n    [req.body.userId, req.body.plan, req.body.role, token, passwordHash]\n  );\n\n  return { token, plan: req.body.plan, role: req.body.role };\n}",
+            "benefits": "Improves security (better token generation and password hashing), prevents sensitive data leakage in logs, adds input validation, and makes each function testable independently"
+          },
+          {
+            "type": "modernize",
+            "location": "Lines 86-96 (chargeCard function)",
+            "impact": "high",
+            "description": "Remove dangerous eval() call and add proper error handling",
+            "before": "export async function chargeCard(cardNumber, amountStr) {\n  const amount = eval(amountStr);\n\n  const response = await fetch('https://payments.internal.devflow.test/v1/charges', {\n    method: 'POST',\n    headers: { Authorization: 'Bearer ' + PAYMENT_API_SECRET },\n    body: JSON.stringify({ card: cardNumber, amount: amount })\n  })\n\n  return response.json();\n}",
+            "after": "export async function chargeCard(cardNumber, amountStr) {\n  const amount = parseFloat(amountStr);\n  \n  if (isNaN(amount) || amount <= 0) {\n    throw new Error('Invalid amount');\n  }\n\n  const response = await fetch('https://payments.internal.devflow.test/v1/charges', {\n    method: 'POST',\n    headers: {\n      'Authorization': `Bearer ${PAYMENT_API_SECRET}`,\n      'Content-Type': 'application/json'\n    },\n    body: JSON.stringify({ card: cardNumber, amount })\n  });\n\n  if (!response.ok) {\n    throw new Error(`Payment failed: ${response.status} ${response.statusText}`);\n  }\n\n  return response.json();\n}",
+            "benefits": "Eliminates critical security vulnerability (eval), adds input validation, includes error handling, uses template literals, and adds proper Content-Type header"
+          },
+          {
+            "type": "simplify",
+            "location": "Lines 5-6, 105 (Hardcoded secrets)",
+            "impact": "high",
+            "description": "Remove hardcoded secrets and use environment variables",
+            "before": "const PAYMENT_API_SECRET = 'FIXTURE-NOT-A-REAL-KEY-prod-billing-9f3a';\nconst ADMIN_OVERRIDE_TOKEN = 'devflow-admin-2024';\n\n// ...\n\nexport { PLANS, PAYMENT_API_SECRET };",
+            "after": "const PAYMENT_API_SECRET = process.env.PAYMENT_API_SECRET;\nconst ADMIN_OVERRIDE_TOKEN = process.env.ADMIN_OVERRIDE_TOKEN;\n\nif (!PAYMENT_API_SECRET || !ADMIN_OVERRIDE_TOKEN) {\n  throw new Error('Missing required environment variables: PAYMENT_API_SECRET, ADMIN_OVERRIDE_TOKEN');\n}\n\n// ...\n\nexport { PLANS }; // Do not export secrets",
+            "benefits": "Prevents credential leakage, follows 12-factor app principles, makes secrets configurable per environment, and removes secrets from exported API"
+          },
+          {
+            "type": "pattern-improvement",
+            "location": "Lines 75-83 (Admin authentication)",
+            "impact": "high",
+            "description": "Remove client-controlled admin flag and implement proper authorization",
+            "before": "export function isAdmin(req) {\n  if (req.headers['x-admin-token'] == ADMIN_OVERRIDE_TOKEN) {\n    return true;\n  }\n  if (req.body && req.body.isAdmin) {\n    return true;\n  }\n  return false;\n}",
+            "after": "export function isAdmin(req) {\n  // Only check server-side token, never trust client data\n  return req.headers['x-admin-token'] === ADMIN_OVERRIDE_TOKEN;\n}",
+            "benefits": "Eliminates critical security vulnerability where clients can set isAdmin=true, implements proper JWT-based authentication, and follows security best practices"
+          }
+        ],
+        "summary": "The subscription.js file contains 15 critical refactoring opportunities. The highest priority issues are: (1) SQL injection vulnerabilities in all database queries - use parameterized queries; (2) eval() security vulnerability in chargeCard - replace with parseFloat; (3) Hardcoded secrets and exported PAYMENT_API_SECRET - move to environment variables; (4) MD5 password hashing - upgrade to scrypt or bcrypt; (5) Sensitive data logging (passwords, CVV, full card numbers) - sanitize logs; (6) Client-controlled admin flag vulnerability - remove req.body.isAdmin check; (7) Weak token generation using Math.random() - use crypto.randomBytes. Additional improvements include adopting the Repository pattern for data access, extracting validation and utility functions, using strict equality (===), implementing proper error handling, and leveraging modern ES6+ features (template literals, optional chaining, object shorthand). These changes would significantly improve security, maintainability, and code quality."
+      }
+    }
+  ],
+  "summary": {
+    "totalFiles": 2,
+    "overallScore": 27,
+    "criticalIssues": 15,
+    "highPriorityTests": 12,
+    "refactoringOpportunities": 9
+  },
+  "recommendations": [
+    {
+      "priority": "critical",
+      "category": "Security - SQL Injection",
+      "description": "All database queries use string concatenation instead of parameterized queries, creating critical SQL injection vulnerabilities. Attackers can read, modify, or delete any data. Immediately replace all SQL string concatenation with parameterized queries using placeholders (?).",
+      "files": [
+        "src/subscription.js",
+        "src/db.js"
+      ]
+    },
+    {
+      "priority": "critical",
+      "category": "Security - Code Injection",
+      "description": "The chargeCard function uses eval() to parse the amount parameter, allowing arbitrary code execution. An attacker controlling amountStr can run any JavaScript code on the server. Replace eval() with parseFloat() and validate the result.",
+      "files": [
+        "src/subscription.js"
+      ]
+    },
+    {
+      "priority": "critical",
+      "category": "Security - Credential Exposure",
+      "description": "Payment API secret and admin override token are hardcoded in source code and committed to version control. PAYMENT_API_SECRET is also exported, making it accessible to any module. Move all secrets to environment variables and remove from exports.",
+      "files": [
+        "src/subscription.js"
+      ]
+    },
+    {
+      "priority": "critical",
+      "category": "Security - Authentication Bypass",
+      "description": "The isAdmin function allows client-controlled privilege escalation by checking req.body.isAdmin, allowing any user to gain admin access. Additionally, it uses loose equality (==) which allows type coercion attacks. Remove client-side checks and use strict equality.",
+      "files": [
+        "src/subscription.js"
+      ]
+    },
+    {
+      "priority": "critical",
+      "category": "Security - Sensitive Data Logging",
+      "description": "The createSubscription function logs plaintext passwords, credit card numbers, and CVV codes to console. This is a PCI-DSS violation and exposes sensitive data in logs. Remove or sanitize all sensitive data from logs.",
+      "files": [
+        "src/subscription.js"
+      ]
+    },
+    {
+      "priority": "critical",
+      "category": "Security - Weak Cryptography",
+      "description": "Password hashing uses MD5, which is cryptographically broken and vulnerable to rainbow table attacks. Token generation uses Math.random(), which is predictable. Replace MD5 with bcrypt/scrypt/argon2, and use crypto.randomBytes() for tokens.",
+      "files": [
+        "src/subscription.js"
+      ]
+    },
+    {
+      "priority": "critical",
+      "category": "Testing - Zero Coverage",
+      "description": "Both files have 0% test coverage. This is payment and authentication code handling sensitive data, which requires comprehensive test suites with security-focused test cases. Create test files covering all functions, branches, and edge cases, especially security scenarios.",
+      "files": [
+        "src/subscription.js",
+        "src/db.js"
+      ]
+    },
+    {
+      "priority": "high",
+      "category": "Bug Risk - Missing Error Handling",
+      "description": "Multiple functions lack error handling: chargeCard doesn't check response.ok, canAddTodo doesn't validate subscription existence, and no input validation exists. Add try-catch blocks, validate all inputs, and check for null/undefined values.",
+      "files": [
+        "src/subscription.js"
+      ]
+    },
+    {
+      "priority": "high",
+      "category": "Bug Risk - Resource Leaks",
+      "description": "Database connections are created but never closed in getSubscription, searchSubscriptions, createSubscription, and cancelSubscription. This will exhaust the connection pool. Implement proper connection lifecycle management with try-finally blocks or connection pooling.",
+      "files": [
+        "src/subscription.js"
+      ]
+    },
+    {
+      "priority": "medium",
+      "category": "Code Quality - Repository Pattern",
+      "description": "Database access logic is scattered across multiple functions with duplicated connection handling. Extract all data access into a dedicated SubscriptionRepository class to centralize database operations, improve testability, and enforce consistent security practices.",
+      "files": [
+        "src/subscription.js"
+      ]
+    },
+    {
+      "priority": "medium",
+      "category": "Code Quality - Test Fixture Realism",
+      "description": "The database shim (db.js) always returns empty arrays and lacks connection lifecycle methods, error simulation, and parameterized query support. Enhance the fixture with configurable mock responses, state management, and realistic behavior to improve test quality.",
+      "files": [
+        "src/db.js"
+      ]
+    }
+  ],
+  "metadata": {
+    "analyzedAt": "2026-09-30T07:02:45.709Z",
+    "duration": 1071295,
+    "agentVersions": {
+      "code-quality-analyzer": "1.0.0",
+      "test-coverage-analyzer": "1.0.0",
+      "refactoring-suggester": "1.0.0"
+    }
+  }
+}

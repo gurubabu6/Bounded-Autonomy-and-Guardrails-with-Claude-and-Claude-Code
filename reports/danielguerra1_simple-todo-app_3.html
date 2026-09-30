@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Code Review Report</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      max-width: 1000px;
+      margin: 0 auto;
+      padding: 24px;
+      background: #f8f9fa;
+      color: #212529;
+    }
+    h1 { color: #2c3e50; border-bottom: 3px solid #3498db; padding-bottom: 12px; }
+    .summary {
+      background: white;
+      padding: 24px;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      margin: 24px 0;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 16px;
+    }
+    .metric { text-align: center; }
+    .metric-value { font-size: 2em; font-weight: bold; color: #3498db; }
+    .metric-label { color: #6c757d; font-size: 0.9em; }
+    ul { list-style: none; padding: 0; }
+    li { padding: 12px; margin: 8px 0; border-radius: 4px; background: white; }
+    .rec-critical { border-left: 4px solid #e74c3c; }
+    .rec-high { border-left: 4px solid #f39c12; }
+    .rec-medium { border-left: 4px solid #3498db; }
+    .rec-low { border-left: 4px solid #27ae60; }
+    .priority { font-weight: bold; margin-right: 8px; }
+    .rec-critical .priority { color: #e74c3c; }
+    .rec-high .priority { color: #f39c12; }
+    .rec-medium .priority { color: #3498db; }
+    .rec-low .priority { color: #27ae60; }
+    footer { text-align: center; color: #6c757d; margin-top: 32px; font-size: 0.9em; }
+  </style>
+</head>
+<body>
+  <h1>🔍 Code Review Report</h1>
+  
+  <div class="summary">
+    <div class="metric">
+      <div class="metric-value">27</div>
+      <div class="metric-label">Overall Score</div>
+    </div>
+    <div class="metric">
+      <div class="metric-value">2</div>
+      <div class="metric-label">Files Reviewed</div>
+    </div>
+    <div class="metric">
+      <div class="metric-value">15</div>
+      <div class="metric-label">Critical Issues</div>
+    </div>
+    <div class="metric">
+      <div class="metric-value">12</div>
+      <div class="metric-label">Tests Needed</div>
+    </div>
+    <div class="metric">
+      <div class="metric-value">9</div>
+      <div class="metric-label">Refactorings</div>
+    </div>
+  </div>
+
+  <h2>🎯 Top Recommendations</h2>
+  <ul>
+      <li class="rec-critical">
+        <span class="priority">[CRITICAL]</span>
+        <strong>Security - SQL Injection</strong>: All database queries use string concatenation instead of parameterized queries, creating critical SQL injection vulnerabilities. Attackers can read, modify, or delete any data. Immediately replace all SQL string concatenation with parameterized queries using placeholders (?).
+        <br><small>Files: src/subscription.js, src/db.js</small>
+      </li>
+    
+      <li class="rec-critical">
+        <span class="priority">[CRITICAL]</span>
+        <strong>Security - Code Injection</strong>: The chargeCard function uses eval() to parse the amount parameter, allowing arbitrary code execution. An attacker controlling amountStr can run any JavaScript code on the server. Replace eval() with parseFloat() and validate the result.
+        <br><small>Files: src/subscription.js</small>
+      </li>
+    
+      <li class="rec-critical">
+        <span class="priority">[CRITICAL]</span>
+        <strong>Security - Credential Exposure</strong>: Payment API secret and admin override token are hardcoded in source code and committed to version control. PAYMENT_API_SECRET is also exported, making it accessible to any module. Move all secrets to environment variables and remove from exports.
+        <br><small>Files: src/subscription.js</small>
+      </li>
+    
+      <li class="rec-critical">
+        <span class="priority">[CRITICAL]</span>
+        <strong>Security - Authentication Bypass</strong>: The isAdmin function allows client-controlled privilege escalation by checking req.body.isAdmin, allowing any user to gain admin access. Additionally, it uses loose equality (==) which allows type coercion attacks. Remove client-side checks and use strict equality.
+        <br><small>Files: src/subscription.js</small>
+      </li>
+    
+      <li class="rec-critical">
+        <span class="priority">[CRITICAL]</span>
+        <strong>Security - Sensitive Data Logging</strong>: The createSubscription function logs plaintext passwords, credit card numbers, and CVV codes to console. This is a PCI-DSS violation and exposes sensitive data in logs. Remove or sanitize all sensitive data from logs.
+        <br><small>Files: src/subscription.js</small>
+      </li>
+    </ul>
+
+  <footer>
+    Generated at 2026-09-30T07:02:45.709Z • Duration: 1071295ms
+  </footer>
+</body>
+</html>

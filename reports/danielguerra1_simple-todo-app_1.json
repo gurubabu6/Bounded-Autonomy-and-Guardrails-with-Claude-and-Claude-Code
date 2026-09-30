@@ -1,0 +1,483 @@
+{
+  "pullRequest": {
+    "owner": "danielguerra1",
+    "repo": "simple-todo-app",
+    "number": 1
+  },
+  "fileReviews": [
+    {
+      "file": "src/utils/priority.js",
+      "codeQuality": {
+        "file": "src/utils/priority.js",
+        "issues": [
+          {
+            "line": 31,
+            "severity": "medium",
+            "category": "best-practice",
+            "description": "Use of Object.hasOwn() may not be supported in older JavaScript environments",
+            "suggestion": "Consider using 'value in WEIGHTS' or add a polyfill for broader compatibility. Alternatively, use 'Object.prototype.hasOwnProperty.call(WEIGHTS, value)' for maximum safety against prototype pollution, though Object.hasOwn is the modern preferred approach if targeting ES2022+."
+          },
+          {
+            "line": 50,
+            "severity": "low",
+            "category": "bug-risk",
+            "description": "comparePriority assumes valid Priority types but doesn't validate input",
+            "suggestion": "Add defensive validation or document that callers must ensure valid priorities. Consider: 'export function comparePriority(a, b) { if (!isPriority(a) || !isPriority(b)) { throw new TypeError(\"Invalid priority\"); } return WEIGHTS[b] - WEIGHTS[a]; }' for production robustness."
+          },
+          {
+            "line": 60,
+            "severity": "info",
+            "category": "performance",
+            "description": "Array spread and sort creates a new array which is correct, but could document the O(n log n) complexity",
+            "suggestion": "This is actually good practice (non-mutating). For very large arrays (>10k items), consider documenting performance characteristics or providing a mutating variant if needed. Current implementation is optimal for typical use cases."
+          },
+          {
+            "line": 39,
+            "severity": "low",
+            "category": "maintainability",
+            "description": "toPriority silently coerces invalid values to DEFAULT_PRIORITY without notification",
+            "suggestion": "Consider logging a warning for invalid priorities in development mode to help catch bugs: 'export function toPriority(value) { if (!isPriority(value) && process.env.NODE_ENV !== \"production\") { console.warn(`Invalid priority: ${value}, using default`); } return isPriority(value) ? value : DEFAULT_PRIORITY; }'"
+          },
+          {
+            "line": 61,
+            "severity": "info",
+            "category": "best-practice",
+            "description": "Nested toPriority calls in sort comparator are safe but could be optimized for large datasets",
+            "suggestion": "For arrays with thousands of items, consider memoizing or pre-processing: 'export function sortByPriority(todos) { return [...todos].sort((a, b) => { const aPrio = toPriority(a.priority); const bPrio = toPriority(b.priority); return WEIGHTS[bPrio] - WEIGHTS[aPrio]; }); }' This avoids repeated lookups, though the current implementation is clean and likely sufficient."
+          }
+        ],
+        "overallScore": 92,
+        "summary": "Excellent code quality with modern JavaScript patterns and strong type safety via JSDoc. The file demonstrates best practices: immutable data structures (Object.freeze), proper type guards (isPriority), non-mutating operations (sortByPriority), and defensive programming (toPriority fallback). No security vulnerabilities detected. The code is well-documented, uses modern ES2022 features appropriately, and follows functional programming principles. Minor improvements could include additional validation in comparePriority and development-mode warnings for invalid inputs. Overall, this is production-ready code with solid architecture."
+      },
+      "testCoverage": {
+        "file": "src/utils/priority.js",
+        "hasTests": true,
+        "testFiles": [
+          "src/utils/priority.test.js"
+        ],
+        "untestedPaths": [
+          {
+            "type": "edge-case",
+            "location": "sortByPriority() - line 59-62",
+            "priority": "high",
+            "reasoning": "No test verifies behavior when todos array contains invalid priority values (not just missing). If a.priority or b.priority is an invalid string like 'URGENT' or 'medium', toPriority will coerce to 'normal', potentially causing unexpected sort behavior.",
+            "suggestedTest": "test('sortByPriority handles invalid priority values by treating them as default', () => { const sorted = sortByPriority([{ priority: 'low' }, { priority: 'INVALID' }, { priority: 'urgent' }]); assert.deepEqual(sorted.map(t => t.priority), ['urgent', 'INVALID', 'low']); assert.equal(sorted[1].priority, 'INVALID'); });"
+          },
+          {
+            "type": "edge-case",
+            "location": "sortByPriority() - line 59-62",
+            "priority": "medium",
+            "reasoning": "No test verifies stable sort behavior when multiple todos have the same priority. JavaScript's Array.sort() is stable as of ES2019, but this critical behavior for user experience isn't explicitly tested.",
+            "suggestedTest": "test('sortByPriority maintains stable sort for same priority', () => { const sorted = sortByPriority([{ id: 1, priority: 'high' }, { id: 2, priority: 'high' }, { id: 3, priority: 'high' }]); assert.deepEqual(sorted.map(t => t.id), [1, 2, 3]); });"
+          },
+          {
+            "type": "edge-case",
+            "location": "sortByPriority() - line 59-62",
+            "priority": "medium",
+            "reasoning": "No test covers todos with non-string but truthy priority values (e.g., numbers, objects, arrays). The toPriority function expects unknown but sortByPriority doesn't document this edge case.",
+            "suggestedTest": "test('sortByPriority handles non-string priority values', () => { const sorted = sortByPriority([{ priority: 123 }, { priority: 'urgent' }, { priority: {} }]); assert.deepEqual(sorted.map(t => typeof t.priority === 'string' ? t.priority : 'coerced'), ['urgent', 'coerced', 'coerced']); });"
+          },
+          {
+            "type": "edge-case",
+            "location": "isPriority() - line 30-31",
+            "priority": "low",
+            "reasoning": "No test verifies behavior with string subclasses or String objects (new String('low')). While unlikely in practice, Object.hasOwn might behave unexpectedly with boxed strings.",
+            "suggestedTest": "test('isPriority handles String objects correctly', () => { assert.equal(isPriority(new String('low')), false); assert.equal(isPriority(Object('high')), false); });"
+          },
+          {
+            "type": "edge-case",
+            "location": "sortByPriority() - line 59-62",
+            "priority": "low",
+            "reasoning": "No test verifies behavior with a single-item array. While trivial, it's a boundary condition that should be covered for completeness.",
+            "suggestedTest": "test('sortByPriority handles single item array', () => { const sorted = sortByPriority([{ priority: 'low' }]); assert.deepEqual(sorted, [{ priority: 'low' }]); });"
+          },
+          {
+            "type": "edge-case",
+            "location": "comparePriority() - line 48-50",
+            "priority": "low",
+            "reasoning": "No test verifies all possible priority combinations. Currently only tests 3 cases (urgent>low, low<urgent, high==high) but there are 16 possible combinations (4x4 matrix).",
+            "suggestedTest": "test('comparePriority handles all priority combinations correctly', () => { const priorities = ['low', 'normal', 'high', 'urgent']; for (let i = 0; i < priorities.length; i++) { for (let j = 0; j < priorities.length; j++) { const result = comparePriority(priorities[i], priorities[j]); if (i === j) assert.equal(result, 0); else if (i < j) assert.ok(result > 0); else assert.ok(result < 0); } } });"
+          },
+          {
+            "type": "edge-case",
+            "location": "toPriority() - line 38-40",
+            "priority": "low",
+            "reasoning": "No explicit test for passing DEFAULT_PRIORITY itself to toPriority(). While covered indirectly, explicit testing ensures the default is itself a valid priority.",
+            "suggestedTest": "test('toPriority accepts DEFAULT_PRIORITY as valid input', () => { assert.equal(toPriority(DEFAULT_PRIORITY), DEFAULT_PRIORITY); });"
+          },
+          {
+            "type": "edge-case",
+            "location": "sortByPriority() - line 59-62",
+            "priority": "medium",
+            "reasoning": "No test verifies behavior with extremely large arrays (performance edge case). While not a functional bug, sorting large todo lists should not cause performance issues.",
+            "suggestedTest": "test('sortByPriority handles large arrays efficiently', () => { const large = Array.from({ length: 10000 }, (_, i) => ({ priority: PRIORITIES[i % 4] })); const start = Date.now(); const sorted = sortByPriority(large); const elapsed = Date.now() - start; assert.ok(elapsed < 100, 'Should sort 10k items in <100ms'); assert.equal(sorted.length, 10000); });"
+          }
+        ],
+        "coverageEstimate": 75,
+        "summary": "The test file src/utils/priority.test.js provides good baseline coverage with 13 tests covering all 4 exported functions, 2 constants, and basic edge cases. However, 75% estimated coverage leaves gaps in several important areas: (1) HIGH priority - sortByPriority doesn't test invalid (but non-missing) priority values being coerced to default; (2) MEDIUM priority - no tests for stable sort behavior with duplicate priorities, non-string priority values, or large array performance; (3) LOW priority - missing tests for String objects, single-item arrays, exhaustive comparePriority combinations, and DEFAULT_PRIORITY validation. The existing tests are well-written and cover the happy path plus common edge cases (null/undefined, empty arrays, mutation prevention, inherited properties). Adding the suggested 8 tests would bring coverage to ~95% and significantly improve confidence in edge case handling."
+      },
+      "refactorings": {
+        "file": "src/utils/priority.js",
+        "suggestions": [
+          {
+            "type": "modernize",
+            "location": "Lines 18-20: PRIORITIES constant",
+            "impact": "low",
+            "description": "Replace Object.keys() with Object.entries() and map to avoid type casting",
+            "before": "/** @type {readonly Priority[]} */\nexport const PRIORITIES = Object.freeze(\n  /** @type {Priority[]} */ (Object.keys(WEIGHTS))\n);",
+            "after": "/** @type {readonly Priority[]} */\nexport const PRIORITIES = Object.freeze(\n  Object.keys(WEIGHTS)\n);",
+            "benefits": "Removes unnecessary type casting. Object.keys() already returns string[], and TypeScript/JSDoc can infer this correctly. The explicit cast adds complexity without value."
+          },
+          {
+            "type": "pattern-improvement",
+            "location": "Lines 11-15: WEIGHTS object",
+            "impact": "medium",
+            "description": "Use Map instead of frozen object for better semantic clarity and performance",
+            "before": "/** Ordering weight per priority. Higher sorts first. */\nconst WEIGHTS = Object.freeze({\n  low: 0,\n  normal: 1,\n  high: 2,\n  urgent: 3\n});",
+            "after": "/** Ordering weight per priority. Higher sorts first. */\nconst WEIGHTS = new Map([\n  ['low', 0],\n  ['normal', 1],\n  ['high', 2],\n  ['urgent', 3]\n]);",
+            "benefits": "Map provides better semantics for key-value lookups, has built-in .has() method (more semantic than Object.hasOwn), and slightly better performance for frequent lookups. It's also inherently iterable."
+          },
+          {
+            "type": "modernize",
+            "location": "Lines 30-32: isPriority function",
+            "impact": "medium",
+            "description": "Update isPriority to use Map.has() if Map is adopted",
+            "before": "export function isPriority(value) {\n  return typeof value === 'string' && Object.hasOwn(WEIGHTS, value);\n}",
+            "after": "export function isPriority(value) {\n  return typeof value === 'string' && WEIGHTS.has(value);\n}",
+            "benefits": "More semantic and clearer intent. Map.has() is purpose-built for checking key existence, whereas Object.hasOwn() is a workaround for object-based lookups."
+          },
+          {
+            "type": "pattern-improvement",
+            "location": "Lines 60-63: sortByPriority function",
+            "impact": "medium",
+            "description": "Extract priority extraction logic to reduce nested function calls",
+            "before": "export function sortByPriority(todos) {\n  return [...todos].sort((a, b) =>\n    comparePriority(toPriority(a.priority), toPriority(b.priority))\n  );\n}",
+            "after": "export function sortByPriority(todos) {\n  return [...todos].sort((a, b) => {\n    const aPriority = toPriority(a.priority);\n    const bPriority = toPriority(b.priority);\n    return comparePriority(aPriority, bPriority);\n  });\n}",
+            "benefits": "Improves readability by breaking down complex nested calls. Also potentially improves performance by avoiding duplicate function calls if the sort algorithm makes multiple comparisons with the same elements."
+          },
+          {
+            "type": "pattern-improvement",
+            "location": "Lines 23, 38, 51, 60: Consolidate into a Priority class",
+            "impact": "high",
+            "description": "Encapsulate priority logic in a class for better organization and extensibility",
+            "before": "/** Ordering weight per priority. Higher sorts first. */\nconst WEIGHTS = Object.freeze({\n  low: 0,\n  normal: 1,\n  high: 2,\n  urgent: 3\n});\n\nexport const PRIORITIES = Object.freeze(\n  Object.keys(WEIGHTS)\n);\n\nexport const DEFAULT_PRIORITY = 'normal';\n\nexport function isPriority(value) {\n  return typeof value === 'string' && Object.hasOwn(WEIGHTS, value);\n}\n\nexport function toPriority(value) {\n  return isPriority(value) ? value : DEFAULT_PRIORITY;\n}\n\nexport function comparePriority(a, b) {\n  return WEIGHTS[b] - WEIGHTS[a];\n}\n\nexport function sortByPriority(todos) {\n  return [...todos].sort((a, b) =>\n    comparePriority(toPriority(a.priority), toPriority(b.priority))\n  );\n}",
+            "after": "/** @typedef {'low' | 'normal' | 'high' | 'urgent'} Priority */\n\n/**\n * Priority handler for todo items.\n * Encapsulates priority validation, comparison, and sorting logic.\n */\nexport class PriorityHandler {\n  static #WEIGHTS = new Map([\n    ['low', 0],\n    ['normal', 1],\n    ['high', 2],\n    ['urgent', 3]\n  ]);\n\n  static DEFAULT = 'normal';\n\n  static get ALL() {\n    return Array.from(this.#WEIGHTS.keys());\n  }\n\n  static isValid(value) {\n    return typeof value === 'string' && this.#WEIGHTS.has(value);\n  }\n\n  static normalize(value) {\n    return this.isValid(value) ? value : this.DEFAULT;\n  }\n\n  static compare(a, b) {\n    const weightA = this.#WEIGHTS.get(a) ?? 0;\n    const weightB = this.#WEIGHTS.get(b) ?? 0;\n    return weightB - weightA;\n  }\n\n  static sort(todos) {\n    return [...todos].sort((a, b) => {\n      const aPriority = this.normalize(a.priority);\n      const bPriority = this.normalize(b.priority);\n      return this.compare(aPriority, bPriority);\n    });\n  }\n}\n\n// Export individual functions for backward compatibility\nexport const PRIORITIES = PriorityHandler.ALL;\nexport const DEFAULT_PRIORITY = PriorityHandler.DEFAULT;\nexport const isPriority = PriorityHandler.isValid.bind(PriorityHandler);\nexport const toPriority = PriorityHandler.normalize.bind(PriorityHandler);\nexport const comparePriority = PriorityHandler.compare.bind(PriorityHandler);\nexport const sortByPriority = PriorityHandler.sort.bind(PriorityHandler);",
+            "benefits": "Encapsulates all priority-related logic in a single cohesive unit. Uses private static fields (#WEIGHTS) to prevent external modification. Provides a clear namespace and makes the module easier to extend (e.g., adding priority colors, icons, etc.). Maintains backward compatibility with existing exports."
+          }
+        ],
+        "summary": "The code is already well-written with modern patterns like const, Object.freeze(), and JSDoc types. Key improvements include: (1) migrating from frozen objects to Map for better semantics and performance, (2) reducing nested function calls in sortByPriority for clarity, (3) optionally consolidating into a PriorityHandler class for better encapsulation and extensibility. The class-based approach (suggestion #8) provides the highest impact by creating a single source of truth for priority logic and using private fields for true immutability. All suggestions maintain or improve type safety and code clarity."
+      }
+    },
+    {
+      "file": "src/utils/priority.test.js",
+      "codeQuality": {
+        "file": "src/utils/priority.test.js",
+        "issues": [
+          {
+            "line": 21,
+            "severity": "low",
+            "category": "best-practice",
+            "description": "Test array contains mixed types without explicit categorization",
+            "suggestion": "Group test cases by type for better readability:\n```javascript\nconst invalidStrings = ['URGENT', '', 'medium'];\nconst invalidTypes = [null, undefined, 3, {}];\nfor (const value of [...invalidStrings, ...invalidTypes]) {\n  assert.equal(isPriority(value), false);\n}\n```\nOr use separate test cases for different invalid input categories."
+          },
+          {
+            "line": 36,
+            "severity": "low",
+            "category": "best-practice",
+            "description": "Missing test case for case sensitivity edge case",
+            "suggestion": "Add explicit test for case-sensitive matching:\n```javascript\ntest('toPriority is case-sensitive', () => {\n  assert.equal(toPriority('High'), DEFAULT_PRIORITY);\n  assert.equal(toPriority('NORMAL'), DEFAULT_PRIORITY);\n});\n```\nThis makes the case-sensitivity requirement explicit in the test suite."
+          },
+          {
+            "line": 46,
+            "severity": "info",
+            "category": "maintainability",
+            "description": "Test could use more descriptive variable names",
+            "suggestion": "Use more descriptive names for clarity:\n```javascript\ntest('sortByPriority orders urgent to low', () => {\n  const unsortedTodos = [\n    { priority: 'low' },\n    { priority: 'urgent' },\n    { priority: 'normal' }\n  ];\n  const sortedTodos = sortByPriority(unsortedTodos);\n  assert.deepEqual(sortedTodos.map((t) => t.priority), ['urgent', 'normal', 'low']);\n});\n```"
+          },
+          {
+            "line": 56,
+            "severity": "medium",
+            "category": "bug-risk",
+            "description": "Test uses nullish coalescing (??) in assertion without verifying the actual property value",
+            "suggestion": "Test the actual undefined value explicitly:\n```javascript\ntest('sortByPriority treats a missing priority as the default', () => {\n  const sorted = sortByPriority([{ priority: 'low' }, {}, { priority: 'urgent' }]);\n  assert.equal(sorted[0].priority, 'urgent');\n  assert.equal(sorted[1].priority, undefined); // Verify it's actually undefined\n  assert.equal(sorted[2].priority, 'low');\n  // Also verify the default is used in sorting:\n  assert.deepEqual(sorted.map((t) => toPriority(t.priority)), ['urgent', 'normal', 'low']);\n});\n```\nThe current test masks whether the implementation preserves undefined vs converts to 'normal'."
+          },
+          {
+            "line": 61,
+            "severity": "low",
+            "category": "best-practice",
+            "description": "Immutability test could be more comprehensive",
+            "suggestion": "Test both array and object immutability:\n```javascript\ntest('sortByPriority does not mutate its input', () => {\n  const obj1 = { priority: 'low', task: 'original' };\n  const obj2 = { priority: 'urgent', task: 'original' };\n  const input = [obj1, obj2];\n  const originalOrder = [...input];\n  \n  sortByPriority(input);\n  \n  // Verify array order unchanged\n  assert.deepEqual(input, originalOrder);\n  // Verify objects themselves weren't modified\n  assert.equal(obj1.task, 'original');\n  assert.equal(obj2.task, 'original');\n});\n```"
+          },
+          {
+            "line": 47,
+            "severity": "info",
+            "category": "maintainability",
+            "description": "Missing test case for stability when priorities are equal",
+            "suggestion": "Add test to verify sort stability:\n```javascript\ntest('sortByPriority maintains relative order for equal priorities', () => {\n  const sorted = sortByPriority([\n    { priority: 'normal', id: 1 },\n    { priority: 'normal', id: 2 },\n    { priority: 'normal', id: 3 }\n  ]);\n  assert.deepEqual(sorted.map((t) => t.id), [1, 2, 3]);\n});\n```\nNote: JavaScript's Array.sort() is stable as of ES2019, so this documents expected behavior."
+          },
+          {
+            "line": 1,
+            "severity": "info",
+            "category": "maintainability",
+            "description": "Missing test coverage for edge cases with large arrays",
+            "suggestion": "Consider adding performance/scale test:\n```javascript\ntest('sortByPriority handles large arrays efficiently', () => {\n  const largeTodos = Array.from({ length: 10000 }, (_, i) => ({\n    priority: PRIORITIES[i % PRIORITIES.length]\n  }));\n  const sorted = sortByPriority(largeTodos);\n  assert.equal(sorted.length, 10000);\n  // Verify first and last are correctly ordered\n  assert.equal(sorted[0].priority, 'urgent');\n  assert.equal(sorted[sorted.length - 1].priority, 'low');\n});\n```"
+          },
+          {
+            "line": 40,
+            "severity": "low",
+            "category": "best-practice",
+            "description": "comparePriority test doesn't verify all priority combinations",
+            "suggestion": "Add comprehensive comparison tests:\n```javascript\ntest('comparePriority orders most urgent first', () => {\n  // Test extremes\n  assert.ok(comparePriority('urgent', 'low') < 0);\n  assert.ok(comparePriority('low', 'urgent') > 0);\n  \n  // Test adjacent priorities\n  assert.ok(comparePriority('high', 'normal') < 0);\n  assert.ok(comparePriority('normal', 'low') < 0);\n  \n  // Test equality\n  assert.equal(comparePriority('high', 'high'), 0);\n});\n```"
+          }
+        ],
+        "overallScore": 85,
+        "summary": "The test file demonstrates good testing practices with comprehensive coverage of the priority utility functions. The code uses modern Node.js testing APIs (node:test, node:assert/strict) and follows clean, readable patterns. Strengths include: (1) thorough edge case testing (inherited properties, empty arrays, mutation prevention), (2) clear test descriptions, (3) use of strict assertions. Areas for improvement: (1) the assertion on line 58 uses nullish coalescing which masks whether undefined is preserved or converted (medium bug-risk), (2) missing explicit tests for case sensitivity and sort stability (low impact), (3) some tests could have more descriptive variable names and comprehensive assertions. No security vulnerabilities or performance issues detected. The test suite provides strong confidence in the implementation's correctness."
+      },
+      "testCoverage": {
+        "file": "src/utils/priority.test.js",
+        "hasTests": true,
+        "testFiles": [
+          "src/utils/priority.test.js"
+        ],
+        "untestedPaths": [
+          {
+            "type": "edge-case",
+            "location": "isPriority function - whitespace handling",
+            "priority": "medium",
+            "reasoning": "The test doesn't verify behavior with whitespace-padded strings like ' high ' or 'high\\n', which could occur from user input or form data",
+            "suggestedTest": "test('isPriority rejects whitespace-padded values', () => { assert.equal(isPriority(' high '), false); assert.equal(isPriority('high\\n'), false); assert.equal(isPriority('\\thigh'), false); });"
+          },
+          {
+            "type": "edge-case",
+            "location": "isPriority function - case sensitivity edge cases",
+            "priority": "high",
+            "reasoning": "While 'URGENT' is tested, mixed-case variants like 'High', 'Normal', 'Urgent' are not tested. These are common user input patterns",
+            "suggestedTest": "test('isPriority rejects mixed-case values', () => { for (const value of ['High', 'Normal', 'Urgent', 'LOW']) { assert.equal(isPriority(value), false); } });"
+          },
+          {
+            "type": "edge-case",
+            "location": "toPriority function - non-primitive values",
+            "priority": "medium",
+            "reasoning": "The test covers null, undefined, string, and number, but doesn't test objects that might have toString() methods, symbols, or arrays",
+            "suggestedTest": "test('toPriority handles objects with toString and other non-primitives', () => { assert.equal(toPriority({ toString: () => 'high' }), DEFAULT_PRIORITY); assert.equal(toPriority(Symbol('high')), DEFAULT_PRIORITY); assert.equal(toPriority(['high']), DEFAULT_PRIORITY); });"
+          },
+          {
+            "type": "edge-case",
+            "location": "comparePriority function - all priority combinations",
+            "priority": "medium",
+            "reasoning": "Only 3 comparisons are tested (urgent vs low, low vs urgent, high vs high). There are 16 possible combinations (4x4) of priority pairs",
+            "suggestedTest": "test('comparePriority handles all priority pairs correctly', () => { const priorities = ['low', 'normal', 'high', 'urgent']; for (let i = 0; i < priorities.length; i++) { for (let j = i + 1; j < priorities.length; j++) { assert.ok(comparePriority(priorities[j], priorities[i]) < 0, `${priorities[j]} should rank higher than ${priorities[i]}`); assert.ok(comparePriority(priorities[i], priorities[j]) > 0); } } });"
+          },
+          {
+            "type": "edge-case",
+            "location": "sortByPriority function - duplicate priorities",
+            "priority": "low",
+            "reasoning": "The test doesn't verify stability when multiple items have the same priority. Sort stability matters for preserving original order of equal elements",
+            "suggestedTest": "test('sortByPriority maintains stable sort for equal priorities', () => { const input = [{ id: 1, priority: 'high' }, { id: 2, priority: 'high' }, { id: 3, priority: 'high' }]; const sorted = sortByPriority(input); assert.deepEqual(sorted.map(t => t.id), [1, 2, 3]); });"
+          },
+          {
+            "type": "edge-case",
+            "location": "sortByPriority function - single item array",
+            "priority": "low",
+            "reasoning": "Empty array is tested, but single-element array is a common edge case for sorting algorithms",
+            "suggestedTest": "test('sortByPriority handles single-item arrays', () => { const result = sortByPriority([{ priority: 'high' }]); assert.equal(result.length, 1); assert.equal(result[0].priority, 'high'); });"
+          },
+          {
+            "type": "edge-case",
+            "location": "sortByPriority function - all invalid priorities",
+            "priority": "medium",
+            "reasoning": "Tests handle missing priority (undefined) but not an array where all items have invalid priorities that will fall back to DEFAULT_PRIORITY",
+            "suggestedTest": "test('sortByPriority handles all invalid priorities as default', () => { const input = [{ priority: 'invalid' }, { priority: null }, { priority: 123 }]; const sorted = sortByPriority(input); assert.equal(sorted.length, 3); });"
+          },
+          {
+            "type": "edge-case",
+            "location": "sortByPriority function - array-like objects",
+            "priority": "low",
+            "reasoning": "Function signature uses readonly T[] but doesn't test with array-like objects or unusual array structures",
+            "suggestedTest": "test('sortByPriority handles large arrays efficiently', () => { const large = Array.from({ length: 1000 }, (_, i) => ({ priority: PRIORITIES[i % 4], id: i })); const sorted = sortByPriority(large); assert.equal(sorted.length, 1000); assert.ok(sorted.every((item, i, arr) => i === 0 || comparePriority(arr[i-1].priority, item.priority) <= 0)); });"
+          },
+          {
+            "type": "branch",
+            "location": "PRIORITIES constant - iteration behavior",
+            "priority": "low",
+            "reasoning": "Test verifies the array contents but doesn't test that PRIORITIES is truly frozen/immutable",
+            "suggestedTest": "test('PRIORITIES is immutable', () => { assert.throws(() => { PRIORITIES[0] = 'changed'; }, TypeError); assert.throws(() => { PRIORITIES.push('critical'); }, TypeError); });"
+          },
+          {
+            "type": "edge-case",
+            "location": "DEFAULT_PRIORITY constant - usage validation",
+            "priority": "medium",
+            "reasoning": "DEFAULT_PRIORITY is exported but never directly tested to ensure it's actually one of the valid PRIORITIES",
+            "suggestedTest": "test('DEFAULT_PRIORITY is a valid priority', () => { assert.ok(isPriority(DEFAULT_PRIORITY)); assert.ok(PRIORITIES.includes(DEFAULT_PRIORITY)); });"
+          },
+          {
+            "type": "edge-case",
+            "location": "isPriority function - Object.create(null) edge case",
+            "priority": "low",
+            "reasoning": "While toString/constructor are tested for prototype pollution, objects created with Object.create(null) behave differently",
+            "suggestedTest": "test('isPriority handles objects without prototypes', () => { const noProto = Object.create(null); noProto.high = true; assert.equal(isPriority(noProto), false); });"
+          },
+          {
+            "type": "edge-case",
+            "location": "sortByPriority function - objects with additional properties",
+            "priority": "low",
+            "reasoning": "Tests use minimal objects, but doesn't verify that other properties are preserved during sort",
+            "suggestedTest": "test('sortByPriority preserves all object properties', () => { const input = [{ priority: 'low', text: 'task1', id: 1 }, { priority: 'urgent', text: 'task2', id: 2 }]; const sorted = sortByPriority(input); assert.equal(sorted[0].text, 'task2'); assert.equal(sorted[0].id, 2); assert.equal(sorted[1].text, 'task1'); });"
+          }
+        ],
+        "coverageEstimate": 85,
+        "summary": "The test suite for priority.test.js is well-structured with good coverage of core functionality (85%). It properly tests all exported functions, handles prototype pollution, validates immutability, and covers basic edge cases. However, it misses several important edge cases: whitespace handling in isPriority (medium priority), mixed-case input validation (high priority), comprehensive comparePriority combinations (medium priority), and DEFAULT_PRIORITY validation (medium priority). The tests follow modern Node.js test patterns using node:test and assert/strict, which is excellent. Recommended additions focus on input validation edge cases, sort stability, and ensuring the DEFAULT_PRIORITY constant is valid. No critical security or data-loss paths are present in this utility module, so missing tests are primarily medium-to-low priority improvements for robustness."
+      },
+      "refactorings": {
+        "file": "src/utils/priority.test.js",
+        "suggestions": [
+          {
+            "type": "pattern-improvement",
+            "location": "Lines 12-67 (entire test suite)",
+            "impact": "medium",
+            "description": "Introduce test grouping with describe blocks for better organization and test isolation",
+            "before": "test('PRIORITIES lists every priority, lowest first', () => {\n  assert.deepEqual([...PRIORITIES], ['low', 'normal', 'high', 'urgent']);\n});\n\ntest('isPriority accepts known values', () => {\n  for (const p of PRIORITIES) assert.equal(isPriority(p), true);\n});\n\ntest('isPriority rejects unknown and non-string values', () => {\n  for (const value of ['URGENT', '', 'medium', null, undefined, 3, {}]) {\n    assert.equal(isPriority(value), false);\n  }\n});",
+            "after": "import { describe } from 'node:test';\n\ndescribe('PRIORITIES constant', () => {\n  test('lists every priority, lowest first', () => {\n    assert.deepEqual([...PRIORITIES], ['low', 'normal', 'high', 'urgent']);\n  });\n});\n\ndescribe('isPriority', () => {\n  test('accepts known values', () => {\n    for (const p of PRIORITIES) assert.equal(isPriority(p), true);\n  });\n\n  test('rejects unknown and non-string values', () => {\n    for (const value of ['URGENT', '', 'medium', null, undefined, 3, {}]) {\n      assert.equal(isPriority(value), false);\n    }\n  });\n\n  test('is not fooled by inherited properties', () => {\n    assert.equal(isPriority('toString'), false);\n    assert.equal(isPriority('constructor'), false);\n  });\n});",
+            "benefits": "Groups related tests together, improves test output readability, enables shared setup/teardown hooks if needed, and makes test intent clearer by showing function boundaries"
+          },
+          {
+            "type": "extract-function",
+            "location": "Lines 47-53, 56-58",
+            "impact": "low",
+            "description": "Extract repeated priority mapping logic into a helper function",
+            "before": "test('sortByPriority orders urgent to low', () => {\n  const sorted = sortByPriority([\n    { priority: 'low' },\n    { priority: 'urgent' },\n    { priority: 'normal' }\n  ]);\n  assert.deepEqual(sorted.map((t) => t.priority), ['urgent', 'normal', 'low']);\n});\n\ntest('sortByPriority treats a missing priority as the default', () => {\n  const sorted = sortByPriority([{ priority: 'low' }, {}, { priority: 'urgent' }]);\n  assert.deepEqual(sorted.map((t) => t.priority ?? 'normal'), ['urgent', 'normal', 'low']);\n});",
+            "after": "const extractPriorities = (todos) => todos.map((t) => t.priority ?? 'normal');\n\ntest('sortByPriority orders urgent to low', () => {\n  const sorted = sortByPriority([\n    { priority: 'low' },\n    { priority: 'urgent' },\n    { priority: 'normal' }\n  ]);\n  assert.deepEqual(extractPriorities(sorted), ['urgent', 'normal', 'low']);\n});\n\ntest('sortByPriority treats a missing priority as the default', () => {\n  const sorted = sortByPriority([{ priority: 'low' }, {}, { priority: 'urgent' }]);\n  assert.deepEqual(extractPriorities(sorted), ['urgent', 'normal', 'low']);\n});",
+            "benefits": "Eliminates duplication, makes tests more declarative, creates a single source of truth for priority extraction logic, and improves consistency across tests"
+          },
+          {
+            "type": "modernize",
+            "location": "Lines 16-17, 20-22, 35-37",
+            "impact": "low",
+            "description": "Use test.each() or describe.each() for parameterized tests instead of manual loops",
+            "before": "test('isPriority accepts known values', () => {\n  for (const p of PRIORITIES) assert.equal(isPriority(p), true);\n});\n\ntest('isPriority rejects unknown and non-string values', () => {\n  for (const value of ['URGENT', '', 'medium', null, undefined, 3, {}]) {\n    assert.equal(isPriority(value), false);\n  }\n});",
+            "after": "describe('isPriority', () => {\n  const validCases = [...PRIORITIES];\n  const invalidCases = ['URGENT', '', 'medium', null, undefined, 3, {}];\n\n  validCases.forEach((priority) => {\n    test(`accepts valid priority: ${priority}`, () => {\n      assert.equal(isPriority(priority), true);\n    });\n  });\n\n  invalidCases.forEach((value) => {\n    test(`rejects invalid value: ${JSON.stringify(value)}`, () => {\n      assert.equal(isPriority(value), false);\n    });\n  });\n});",
+            "benefits": "Each iteration becomes an independent test case with clear naming, better failure reporting (shows which specific value failed), and improved test isolation"
+          },
+          {
+            "type": "simplify",
+            "location": "Lines 52-53",
+            "impact": "low",
+            "description": "Simplify priority extraction by using consistent approach across all sortByPriority tests",
+            "before": "test('sortByPriority orders urgent to low', () => {\n  const sorted = sortByPriority([\n    { priority: 'low' },\n    { priority: 'urgent' },\n    { priority: 'normal' }\n  ]);\n  assert.deepEqual(sorted.map((t) => t.priority), ['urgent', 'normal', 'low']);\n});",
+            "after": "test('sortByPriority orders urgent to low', () => {\n  const input = [\n    { priority: 'low' },\n    { priority: 'urgent' },\n    { priority: 'normal' }\n  ];\n  const sorted = sortByPriority(input);\n  const priorities = sorted.map((t) => t.priority);\n  \n  assert.deepEqual(priorities, ['urgent', 'normal', 'low']);\n});",
+            "benefits": "Improves readability by breaking down the transformation into named steps, makes debugging easier by allowing inspection of intermediate values, and follows the Arrange-Act-Assert pattern more explicitly"
+          },
+          {
+            "type": "pattern-improvement",
+            "location": "Lines 40-44",
+            "impact": "low",
+            "description": "Use table-driven tests with test data constants for comparePriority edge cases",
+            "before": "test('comparePriority orders most urgent first', () => {\n  assert.ok(comparePriority('urgent', 'low') < 0);\n  assert.ok(comparePriority('low', 'urgent') > 0);\n  assert.equal(comparePriority('high', 'high'), 0);\n});",
+            "after": "test('comparePriority orders most urgent first', () => {\n  const testCases = [\n    { a: 'urgent', b: 'low', expected: 'negative', description: 'urgent before low' },\n    { a: 'low', b: 'urgent', expected: 'positive', description: 'low after urgent' },\n    { a: 'high', b: 'high', expected: 'zero', description: 'equal priorities' }\n  ];\n\n  testCases.forEach(({ a, b, expected, description }) => {\n    const result = comparePriority(a, b);\n    if (expected === 'negative') {\n      assert.ok(result < 0, description);\n    } else if (expected === 'positive') {\n      assert.ok(result > 0, description);\n    } else {\n      assert.equal(result, 0, description);\n    }\n  });\n});",
+            "benefits": "Makes test cases explicit and easy to extend, provides better error messages with descriptions, and creates a clear specification of expected behavior"
+          },
+          {
+            "type": "extract-function",
+            "location": "Lines 20-22",
+            "impact": "low",
+            "description": "Extract test data constants to top of file for reusability and clarity",
+            "before": "test('isPriority rejects unknown and non-string values', () => {\n  for (const value of ['URGENT', '', 'medium', null, undefined, 3, {}]) {\n    assert.equal(isPriority(value), false);\n  }\n});",
+            "after": "// Test data constants\nconst INVALID_PRIORITY_VALUES = [\n  'URGENT',      // Wrong case\n  '',            // Empty string\n  'medium',      // Unknown priority\n  null,          // Null value\n  undefined,     // Undefined value\n  3,             // Number\n  {}             // Object\n];\n\ntest('isPriority rejects unknown and non-string values', () => {\n  for (const value of INVALID_PRIORITY_VALUES) {\n    assert.equal(isPriority(value), false);\n  }\n});",
+            "benefits": "Documents test intent through naming, allows reuse across multiple tests, makes test data easy to update, and improves code organization with inline comments explaining each case"
+          }
+        ],
+        "summary": "The test file is well-structured and follows modern JavaScript conventions. Key improvements include: (1) organizing tests with describe blocks for better structure and output readability, (2) extracting repeated mapping logic into helper functions to reduce duplication, (3) converting manual loops to individual parameterized tests for better failure reporting, (4) extracting test data constants for clarity and reusability, and (5) applying table-driven test patterns for comprehensive edge case coverage. These changes improve maintainability, readability, and test isolation while maintaining the existing comprehensive test coverage."
+      }
+    }
+  ],
+  "summary": {
+    "totalFiles": 2,
+    "overallScore": 89,
+    "criticalIssues": 0,
+    "highPriorityTests": 2,
+    "refactoringOpportunities": 11
+  },
+  "recommendations": [
+    {
+      "priority": "high",
+      "category": "Testing",
+      "description": "Add test cases for mixed-case priority values ('High', 'Normal', 'Urgent', 'LOW') to verify case sensitivity is enforced. These are common user input patterns that should be explicitly rejected.",
+      "files": [
+        "src/utils/priority.test.js"
+      ]
+    },
+    {
+      "priority": "high",
+      "category": "Testing",
+      "description": "Add explicit test for invalid priority values in sortByPriority to verify they are coerced to DEFAULT_PRIORITY during sorting. Current tests only cover missing (undefined) priorities.",
+      "files": [
+        "src/utils/priority.test.js"
+      ]
+    },
+    {
+      "priority": "medium",
+      "category": "Code Quality",
+      "description": "Consider migrating from Object.freeze() with object literals to Map for WEIGHTS. Map provides better semantics, built-in .has() method, and improved performance for lookups.",
+      "files": [
+        "src/utils/priority.js"
+      ]
+    },
+    {
+      "priority": "medium",
+      "category": "Testing",
+      "description": "Fix test assertion on line 56-58 that uses nullish coalescing (??), which masks whether sortByPriority preserves undefined or converts it. Test should verify actual undefined value explicitly.",
+      "files": [
+        "src/utils/priority.test.js"
+      ]
+    },
+    {
+      "priority": "medium",
+      "category": "Code Organization",
+      "description": "Organize test file with describe() blocks to group tests by function (isPriority, toPriority, comparePriority, sortByPriority) for better structure and readability.",
+      "files": [
+        "src/utils/priority.test.js"
+      ]
+    },
+    {
+      "priority": "medium",
+      "category": "Testing",
+      "description": "Add tests for sort stability (multiple items with same priority), comprehensive comparePriority combinations, and DEFAULT_PRIORITY validation.",
+      "files": [
+        "src/utils/priority.test.js"
+      ]
+    },
+    {
+      "priority": "low",
+      "category": "Compatibility",
+      "description": "Object.hasOwn() requires ES2022+. Consider adding a polyfill or using Object.prototype.hasOwnProperty.call() for broader browser compatibility.",
+      "files": [
+        "src/utils/priority.js"
+      ]
+    },
+    {
+      "priority": "low",
+      "category": "Developer Experience",
+      "description": "Add development-mode warnings in toPriority() when invalid priorities are coerced to DEFAULT_PRIORITY to help developers catch bugs early.",
+      "files": [
+        "src/utils/priority.js"
+      ]
+    },
+    {
+      "priority": "low",
+      "category": "Code Quality",
+      "description": "Extract priority extraction logic in sortByPriority to reduce nested function calls and improve readability. Store toPriority results in variables before passing to comparePriority.",
+      "files": [
+        "src/utils/priority.js"
+      ]
+    }
+  ],
+  "metadata": {
+    "analyzedAt": "2026-09-30T06:37:23.491Z",
+    "duration": 448505,
+    "agentVersions": {
+      "code-quality-analyzer": "1.0.0",
+      "test-coverage-analyzer": "1.0.0",
+      "refactoring-suggester": "1.0.0"
+    }
+  }
+}
